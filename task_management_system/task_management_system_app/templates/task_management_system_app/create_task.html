@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Task</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    
+    <style>
+        /* Toast Notification Styling */
+        .toast {    
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+            padding: 15px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Add Task</h2>
+        <br />
+        
+        <!-- Show success or error messages -->
+        {% if messages %}
+            <div class="alert alert-info">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Form -->
+        <form method="post" action="{% url 'create_task' %}">
+            {% csrf_token %}
+            
+            <!-- Dropdown for Existing Task -->
+            <div class="form-group">
+                <label for="task_select">Select Task:</label>
+                <select class="form-control" id="task_select" name="task_name">
+                    <option value="" disabled selected>Select a task </option>
+                    {% for task in tasks %}
+                        <option value="{{ task }}">{{ task }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% comment %} <!-- Input for New Task Name -->
+            <div class="form-group">
+                <label for="task_name">Task Name (if creating a new task):</label>
+                <input type="text" class="form-control" id="task_name" name="task_name" placeholder="Enter new task name">
+            </div> {% endcomment %}
+            
+            
+            <!-- Category Dropdown -->
+            <div class="form-group">
+                <label for="categorySelect">Select Category:</label>
+                <select class="form-control" id="categorySelect" name="category">
+                    <option value="" disabled selected>Select a category</option>
+                    <option value="CIT-KG">CIT-KG</option>
+                    <option value="CIT-KG2">CIT-KG2</option>
+                    <option value="MIB-TIB">MIB/TIB</option>
+                    <option value="Centerwise">Centerwise</option>
+                    <option value="DAS">DAS</option>
+                    <option value="Updater">Updater</option>
+                    <option value="IHCM">IHCM</option>
+                    <option value="DMJ">DMJ</option>
+                    {% for category in categories %}
+                        <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            {% comment %} <div class="form-group">
+                <label for="Category_name">Category Name (if creating a new Category):</label>
+                <input type="text" class="form-control" id="categorySelect" name="category" placeholder="Enter new category name">
+                {% for category in categories %}
+                <option value="{{ category.name }}">{{ category.name }}</option>
+                {% endfor %}
+            </div> {% endcomment %}
+
+            <!-- Assigned User Dropdown -->
+            <div class="form-group">
+                <label for="assigned_to">Assign to:</label>
+                <select class="form-control" id="assigned_to" name="assigned_to" required>
+                    <option value="" disabled selected>Select user</option>
+                    {% for user in users %}
+                        <option value="{{ user.username }}">{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Start Date -->
+            <div class="form-group">
+                <label for="start_date">Start Date:</label>
+                <input type="date"  id="start_date" name="start_date" required>
+            </div>
+
+            <!-- End Date -->
+            <div class="form-group">
+                <label for="end_date">End Date:</label>
+                <input type="date"  id="end_date" name="end_date" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
+        </form>
+    </div>
+    
+    <!-- Success Toast Notification -->
+    <div class="toast" id="successToast">
+        Task has been created successfully!
+    </div>
+
+    <!-- Include JS files -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- Validation Script -->
+    <script>
+        // Form validation to ensure start date is before end date
+        function validateForm() {
+            var startDate = document.getElementById('start_date').value;
+            var endDate = document.getElementById('end_date').value;
+
+            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+                alert('Start date cannot be later than end date');
+                return false;
+            }
+            return true;
+        }
+
+        // Show success toast if there's a success message
+        {% if messages %}
+        $(document).ready(function() {
+            // Show the toast notification
+            $('#successToast').addClass('show');
+            
+            // Automatically hide the toast after 3 seconds
+            setTimeout(function() {
+                $('#successToast').removeClass('show');
+            }, 3000); // Hide after 3 seconds
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

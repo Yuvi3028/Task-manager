@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User's Task List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Adding Chart.js -->
+    <style>
+        /* Custom styles for the sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -250px;  /* Initially off-screen */
+            height: 100%;
+            width: 250px;
+            background-color: #90ee90;
+            padding-top: 20px;
+            display: block;
+            z-index: 1000;
+            transition: left 0.3s ease;  /* Smooth transition */
+        }
+
+        .sidebar a {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar h3 {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background-color: rgb(99, 87, 95);
+        }
+
+        .content {
+            margin-left: 250px;  /* Add some left margin to push content when sidebar is visible */
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Custom styles for the heading */
+        .content h1 {
+            text-align: center;
+        }
+
+        /* Custom styles for the buttons */
+        .btn-block {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        /* Button for the sidebar toggle */
+        .sidebar-toggle {
+            font-size: 1.5rem;
+            cursor: pointer;
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            z-index: 1100;
+        }
+
+        /* Positioning the user info section at the top right corner */
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px; /* Align to the right corner */
+            z-index: 1100;
+            font-size: 16px;
+            background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .user-info a {
+            margin-left: 5px;
+            text-decoration: none;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+                height: auto;
+                z-index: 1001;
+            }
+
+            .sidebar a {
+                padding: 15px 30px;
+            }
+
+            .sidebar-toggle {
+                top: 10px;
+                left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- User Info in the top right corner -->
+    <div class="user-info">
+        <span>Welcome, {{ user.username }}</span> |
+        <a href="{% url 'logout' %}">Logout</a>
+    </div>
+
+    <!-- Sidebar for Admin Users -->
+    <span class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</span>
+
+    <div class="sidebar" id="sidebarMenu" style="left: 0;">
+        <h3 class="text-center mb-4">Admin Menu</h3>
+        <a href="{% url 'create_task' %}" class="btn btn-primary btn-block mb-2">Create Task</a>
+        <a href="{% url 'view_task_list' %}" class="btn btn-primary btn-block mb-2">View Task List</a> <!-- New View Task List Link -->
+        {% comment %} <a href="{% url 'view_task_chart' %}" class="btn btn-primary btn-block mb-2">View Task Chart</a> {% endcomment %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="content" id="mainContent">
+        <h1>User's Task List</h1>
+
+        <!-- Back Button -->
+        <a href="{% url 'home' %}" class="btn btn-secondary mb-4">Back to Home</a> <!-- This is the back button -->
+
+        <!-- Date Range Filter Form -->
+        <div class="container mb-4">
+            <form method="get" action="{% url 'view_task_list' %}" class="form-inline">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="from_date">From Date:</label>
+                        <input type="date" id="from_date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="to_date">To Date:</label>
+                        <input type="date" id="to_date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary mt-4">Go</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+
+        <!-- Table for displaying tasks -->
+        <div class="container mt-4">
+            <h3 class="text-center">Task List</h3>
+        
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Task Name</th>
+                        <th>Category</th>
+                        <th>Assigned User</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                        <tr>
+                            <td>{{ task.task_name }}</td>
+                            <td>{{ task.category }}</td>
+                            <td>{{ task.assigned_to }}</td>
+                            <td>{{ task.start_date }}</td>
+                            <td>{{ task.end_date }}</td>
+                            <td>
+                                <!-- Edit and Delete buttons -->
+                                <a href="{% url 'update_task' task.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                <!-- Delete button that triggers modal -->
+                                <a href="{% url 'delete_task' task.id %}" class="btn btn-danger btn-sm delete-btn">Delete</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">No tasks found for the selected date range.</td>
+                        </tr>    
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Deletion Confirmation Modal -->
+    <div class="modal" tabindex="-1" role="dialog" id="deleteModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-message">Are you sure you want to delete the task?</p>
+                </div>
+                <div class="modal-footer">
+                    <form id="delete-form" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Function to toggle the sidebar visibility
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebarMenu');
+            var mainContent = document.getElementById('mainContent');
+            
+            // If the sidebar is off-screen, slide it in
+            if (sidebar.style.left === '-250px' || sidebar.style.left === "") {
+                sidebar.style.left = '0';  // Slide in the sidebar
+                mainContent.style.marginLeft = '250px';  // Shift content to the right
+            } else {
+                sidebar.style.left = '-250px';  // Slide out the sidebar
+                mainContent.style.marginLeft = '0';  // Reset content margin
+            }
+        }
+    </script>
+</body>
+</html>

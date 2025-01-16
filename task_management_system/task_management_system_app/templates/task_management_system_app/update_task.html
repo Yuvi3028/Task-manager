@@ -1,0 +1,115 @@
+
+{% block content %}
+  <div class="container mt-5">
+    <h2 class="text-center">Edit Task: {{ task.task_name }} - {{ task.assigned_to }} - {{ task.category }}</h2>
+    <br />
+
+    <!-- Show success or error messages -->
+    {% if messages %}
+      <div class="alert alert-info">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Task Form -->
+    <form method="POST" action="{% url 'update_task' task.id %}">
+      {% csrf_token %}
+
+      <!-- Task Name -->
+      <div class="form-group">
+        <label for="task_select">Select Task:</label>
+        <select class="form-control" id="task_select" name="task_name">
+            <option value="" disabled selected>Select a task </option>
+            {% for task in tasks %}
+                <option value="{{ task }}">{{ task }}</option>
+            {% endfor %}
+        </select>
+      </div>
+
+      <!-- Category Dropdown -->
+      <div class="form-group">
+        <label for="categorySelect">Select Category:</label>
+        <select class="form-control" id="categorySelect" name="category" required>
+          <option value="" disabled>Select a category</option>
+          <option value="CIT-KG" {% if task.category == 'CIT-KG' %}selected{% endif %}>CIT-KG</option>
+          <option value="CIT-KG2" {% if task.category == 'CIT-KG2' %}selected{% endif %}>CIT-KG2</option>
+          <option value="MIB-TIB" {% if task.category == 'MIB-TIB' %}selected{% endif %}>MIB/TIB</option>
+          <option value="Centerwise" {% if task.category == 'Centerwise' %}selected{% endif %}>Centerwise</option>
+          <option value="DAS" {% if task.category == 'DAS' %}selected{% endif %}>DAS</option>
+          <option value="Updater" {% if task.category == 'Updater' %}selected{% endif %}>Updater</option>
+          <option value="IHCM" {% if task.category == 'IHCM' %}selected{% endif %}>IHCM</option>
+          <option value="DMJ" {% if task.category == 'DMJ' %}selected{% endif %}>DMJ</option>
+          {% for category in categories %}
+            <option value="{{ category.name }}" {% if task.category == category.name %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Assigned User Dropdown -->
+      <div class="form-group">
+        <label for="assigned_to">Assign to:</label>
+        <select class="form-control" id="assigned_to" name="assigned_to" required>
+          <option value="" disabled>Select user</option>
+          {% for user in users %}
+            <option value="{{ user.username }}" {% if user.username == task.assigned_to %}selected{% endif %}>{{ user.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Start Date -->
+      <div class="form-group">
+        <label for="start_date">Start Date:</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ task.start_date }}" required>
+      </div>
+
+      <!-- End Date -->
+      <div class="form-group">
+        <label for="end_date">End Date:</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ task.end_date }}" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save changes</button>
+      <button class="btn btn-secondary" onclick="window.location.href='{% url 'view_task_list' %}'">back</button>
+    </form>
+  </div>
+
+  <!-- Success Toast Notification -->
+  <div class="toast" id="successToast">
+    Task has been updated successfully!
+  </div>
+
+  <!-- Include JS files -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <!-- Validation Script -->
+  <script>
+    // Form validation to ensure start date is before end date
+    function validateForm() {
+      var startDate = document.getElementById('start_date').value;
+      var endDate = document.getElementById('end_date').value;
+
+      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        alert('Start date cannot be later than end date');
+        return false;
+      }
+      return true;
+    }
+
+    // Show success toast if there's a success message
+    {% if messages %}
+    $(document).ready(function() {
+      // Show the toast notification
+      $('#successToast').addClass('show');
+      
+      // Automatically hide the toast after 3 seconds
+      setTimeout(function() {
+        $('#successToast').removeClass('show');
+      }, 3000); // Hide after 3 seconds
+    });
+    {% endif %}
+  </script>
+{% endblock %}

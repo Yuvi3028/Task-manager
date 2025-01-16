@@ -1,0 +1,56 @@
+@login_required
+def create_task(request):
+    try:
+        # Load tasks from Excel file (optional part)
+        excel_file_path = "tasks.xlsx"
+        if os.path.exists(excel_file_path):
+            df = pd.read_excel(excel_file_path)
+            tasks = df['Task Name'].dropna().tolist()  # List of task names from the Excel file
+        else:
+            tasks = []
+    except Exception as e:
+        print("Error loading Excel file:", e)
+        tasks = []
+
+    # Fetch categories and users from the database
+    categories = Category.objects.all()
+    users = User.objects.all()  # Fetch all users for assigning tasks
+
+    if request.method == 'POST':
+        form = TaskForm(request.POST)
+
+        # Debug: Check the submitted form data
+        print("Form Data Submitted:", form.data)  # This will print the form data in the server logs
+
+        if form.is_valid():
+            try:
+                # Get the user by username from the form data
+                assigned_user = User.objects.get(username=form.cleaned_data['assigned_to'])
+
+                # Create and save the task in the database
+                task = form.save(commit=False)  # Create the task but don't save it yet
+                task.assigned_to = assigned_user  # Set assigned user manually
+                task.save()  # Now save the task
+
+                # Show success message and redirect to the home page
+                messages.success(request, 'Task has been successfully created!')
+                return redirect('create_task')
+            except ObjectDoesNotExist:
+                # If the user is not found, show error message
+                messages.error(request, 'Selected user does not exist. Please choose a valid user.')
+        else:
+            # If the form is not valid, print the errors for debugging
+            print("Form Errors:", form.errors)  # Print form errors
+            messages.error(request, 'Form submission error. Please check the input data.')
+
+    else:
+        form = TaskForm()  # Initialize an empty form
+
+    context = {
+        'form': form,
+        'users': users,
+        'categories': categories,
+        'tasks': tasks,  # Pass the list of tasks from Excel to the template if needed
+    }
+
+    return render(request, 'task_management_system_app/create_task.html', context)

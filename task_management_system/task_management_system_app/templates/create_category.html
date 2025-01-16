@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Category</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Create Category</h2>
+        <br>
+        <form method="post" action="{% url 'create_category' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="categorySelect">Select Category:</label>
+                <select class="form-control" id="categorySelect" name="category" required>
+                    <option value="" disabled selected>Select a category</option>
+                    <option value="CIT-KG">CIT-KG</option>
+                    <option value="CIT-KG2">CIT-KG2</option>
+                    <option value="MIB-TIB">MIB/TIB</option>
+                    <option value="Centerwise">Centerwise</option>
+                    <option value="DAS">DAS</option>
+                    <option value="Updater">Updater</option>
+                    <option value="IHCM">IHCM</option>
+                    <option value="DMJ">DMJ</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
+        </form>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+</head>
+<body>
+  <h1>Your Daily Task</h1>
+  {% if task %}
+    <p>{{ task }}</p>
+  {% else %}
+    <p>No tasks assigned yet. Please check back later.</p>
+  {% endif %}
+</body>
+</html>
