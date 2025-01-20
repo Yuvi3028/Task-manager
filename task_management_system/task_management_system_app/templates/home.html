@@ -162,7 +162,6 @@
             <script>
                 var ctx = document.getElementById('taskDistributionChart').getContext('2d');
             
-                // List of colors for each user
                 var colors = [
                     'rgba(76, 180, 84, 0.7)',   // Green
                     'rgba(54, 162, 235, 0.7)',   // Blue
@@ -174,7 +173,6 @@
                     'rgba(75, 192, 192, 0.7)',   // Teal
                     'rgba(153, 102, 255, 0.7)',  // Light Purple
                     'rgba(255, 99, 132, 0.7)',   // Pink
-                    // Add more colors as needed
                 ];
             
                 var taskData = {
@@ -184,13 +182,11 @@
                         data: {{ task_counts_values|safe }},  // Task counts
                         backgroundColor: function(context) {
                             var index = context.dataIndex;
-                            // Return the color for each bar based on the index
-                            return colors[index % colors.length];
+                            return colors[index % colors.length];  // Assign colors dynamically
                         },
-                        borderColor: 'rgb(61, 196, 83)',  // Border color (can also be dynamic)
+                        borderColor: 'rgb(61, 196, 83)',  // Border color
                         borderWidth: 1,
-                        // Store task names for each user to display in tooltip
-                        taskNames: {{ task_names_values|safe }}
+                        taskNames: {{ task_names_values|safe }}  // Store task names for tooltips
                     }]
                 };
             
@@ -208,17 +204,14 @@
                         plugins: {
                             tooltip: {
                                 callbacks: {
-                                    // Customize the tooltip content
                                     title: function(tooltipItem) {
-                                        // Show the user's name as the tooltip title
-                                        return tooltipItem[0].label; 
+                                        return tooltipItem[0].label;  // Show user's name in tooltip title
                                     },
                                     label: function(tooltipItem) {
-                                        var userIndex = tooltipItem.dataIndex; // Get the index of the bar
-                                        var taskCount = tooltipItem.raw; // Task count
-                                        var taskNames = taskData.datasets[0].taskNames[userIndex]; // Task names for the user
+                                        var userIndex = tooltipItem.dataIndex;
+                                        var taskCount = tooltipItem.raw;
+                                        var taskNames = taskData.datasets[0].taskNames[userIndex];  // Task names for user
                                         
-                                        // Return the task count and task names in the tooltip
                                         return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(', ');
                                     }
                                 }
@@ -226,16 +219,7 @@
                         }
                     }
                 });
-            </script>
-
-            <!-- Excel Download Button -->
-            <div class="text-center mt-4">
-                <form method="get" action="{% url 'download_tasks' %}">
-                    <input type="hidden" name="from_date" value="{{ from_date|date:'d-m-Y' }}">
-                    <input type="hidden" name="to_date" value="{{ to_date|date:'d-m-Y' }}">
-                    <button type="submit" class="btn btn-success">Download Tasks as Excel</button>
-                </form>
-            </div>
+            </script>  
         {% else %}
             <!-- Normal User View -->
             <h2 class="text-center mt-5">Your Daily Assigned Tasks</h2>

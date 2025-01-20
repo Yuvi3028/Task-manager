@@ -33,13 +33,7 @@
         <br />
         
         <!-- Show success or error messages -->
-        {% if messages %}
-            <div class="alert alert-info">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
+
 
         <!-- Form -->
         <form method="post" action="{% url 'create_task' %}">
@@ -49,48 +43,36 @@
             <div class="form-group">
                 <label for="task_select">Select Task:</label>
                 <select class="form-control" id="task_select" name="task_name">
-                    <option value="" disabled selected>Select a task </option>
+                    <option value="" disabled selected>Select a task</option>
                     {% for task in tasks %}
                         <option value="{{ task }}">{{ task }}</option>
                     {% endfor %}
                 </select>
             </div>
-
-            {% comment %} <!-- Input for New Task Name -->
+        
+            <!-- Input for New Task Name -->
             <div class="form-group">
-                <label for="task_name">Task Name (if creating a new task):</label>
-                <input type="text" class="form-control" id="task_name" name="task_name" placeholder="Enter new task name">
-            </div> {% endcomment %}
-            
+                <label for="new_task_name">Task Name (if creating a new task):</label>
+                <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
+            </div>
             
             <!-- Category Dropdown -->
             <div class="form-group">
                 <label for="categorySelect">Select Category:</label>
                 <select class="form-control" id="categorySelect" name="category">
                     <option value="" disabled selected>Select a category</option>
-                    <option value="CIT-KG">CIT-KG</option>
-                    <option value="CIT-KG2">CIT-KG2</option>
-                    <option value="MIB-TIB">MIB/TIB</option>
-                    <option value="Centerwise">Centerwise</option>
-                    <option value="DAS">DAS</option>
-                    <option value="Updater">Updater</option>
-                    <option value="IHCM">IHCM</option>
-                    <option value="DMJ">DMJ</option>
                     {% for category in categories %}
                         <option value="{{ category.name }}">{{ category.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-
-
-            {% comment %} <div class="form-group">
-                <label for="Category_name">Category Name (if creating a new Category):</label>
-                <input type="text" class="form-control" id="categorySelect" name="category" placeholder="Enter new category name">
-                {% for category in categories %}
-                <option value="{{ category.name }}">{{ category.name }}</option>
-                {% endfor %}
-            </div> {% endcomment %}
-
+        
+            <!-- Input for New Category Name -->
+            <div class="form-group">
+                <label for="new_category_name">Category Name (if creating a new category):</label>
+                <input type="text" class="form-control" id="new_category_name" name="new_category_name" placeholder="Enter new category name">
+            </div>
+        
             <!-- Assigned User Dropdown -->
             <div class="form-group">
                 <label for="assigned_to">Assign to:</label>
@@ -101,19 +83,19 @@
                     {% endfor %}
                 </select>
             </div>
-
+        
             <!-- Start Date -->
             <div class="form-group">
                 <label for="start_date">Start Date:</label>
-                <input type="date"  id="start_date" name="start_date" required>
+                <input type="date" id="start_date" name="start_date" required>
             </div>
-
+        
             <!-- End Date -->
             <div class="form-group">
                 <label for="end_date">End Date:</label>
-                <input type="date"  id="end_date" name="end_date" required>
+                <input type="date" id="end_date" name="end_date" required>
             </div>
-
+        
             <button type="submit" class="btn btn-primary">Submit</button>
             <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
         </form>

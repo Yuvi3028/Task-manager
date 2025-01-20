@@ -78,22 +78,25 @@ class LoginForm(AuthenticationForm):
     
 @login_required
 def home(request):
+    # Get today's date
+    today = datetime.today().date()
+
     # Initialize from_date and to_date as None by default
     from_date = None
     to_date = None
-    tasks = Task.objects.all()  # Default to all tasks
+    tasks = Task.objects.all()  # Default to all tasks initially
 
     # Handle date range filter if provided in the GET request
     if 'from_date' in request.GET and 'to_date' in request.GET:
         try:
-            # Parse dates from the query string (from_date and to_date)
+            # Parse the from_date and to_date from the GET request
             from_date = datetime.strptime(request.GET['from_date'], '%Y-%m-%d').date()
             to_date = datetime.strptime(request.GET['to_date'], '%Y-%m-%d').date()
 
-            # Filter tasks based on the selected date range
+            # Filter tasks based on the date range
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
         except ValueError:
-            pass  # Handle invalid date formats gracefully
+            pass  # Handle invalid date format gracefully
 
     # Admin view: show tasks for all users and generate task distribution chart
     if request.user.is_superuser:
@@ -101,39 +104,48 @@ def home(request):
         task_counts = {}
         task_names = {}
 
-        # Fetch tasks assigned to each user
+        # If no date range is selected (i.e., from_date and to_date are None), filter for today's tasks
+        if not from_date and not to_date:
+            tasks = Task.objects.filter(start_date__lte=today, end_date__gte=today)
+        
+        # Fetch tasks assigned to each user (considering the date filters)
         for user in users:
+            # Exclude the admin user from the chart
+            if user.is_superuser:
+                continue
+            
             user_tasks = tasks.filter(assigned_to=user)
             task_counts[user.username] = user_tasks.count()
             task_names[user.username] = [task.task_name for task in user_tasks]
 
-        # Prepare the data for the chart and pass to the template
+        # Prepare the data for the chart
         user_names = list(task_counts.keys())
         task_counts_values = list(task_counts.values())
         task_names_values = list(task_names.values())
 
-        # Render the template with the chart data, tasks, and filter parameters
+        # Render the template with chart data, filtered tasks, and filter parameters
         return render(request, 'home.html', {
             'user_names': json.dumps(user_names),
             'task_counts_values': json.dumps(task_counts_values),
             'task_names_values': json.dumps(task_names_values),
-            'tasks': tasks,  # Pass the filtered tasks
+            'tasks': tasks,  # Pass the filtered tasks to the template
             'from_date': from_date,
             'to_date': to_date,
         })
     
-    # Regular users: show their assigned tasks
+    # For regular users: filter tasks for the logged-in user and the selected date range
     else:
-        # Filter tasks for the logged-in user and the selected date range
         tasks = tasks.filter(assigned_to=request.user)
 
-        # If the user has applied a date filter, apply it to their tasks
         if from_date and to_date:
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
+        else:
+            # Default to today's tasks if no date range is provided
+            tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
         # Render the template with tasks assigned to the user
         return render(request, 'home.html', {
-            'tasks': tasks,  # Pass the filtered tasks for the user
+            'tasks': tasks,
             'from_date': from_date,
             'to_date': to_date,
         })
@@ -250,45 +262,60 @@ def create_task(request):
     users = User.objects.all()
 
     if request.method == 'POST':
-        form = TaskForm(request.POST)  # Pass the form with POST data
-        
+        # Get new task and category names from POST data
+        new_task_name = request.POST.get('new_task_name')
+        new_category_name = request.POST.get('new_category_name')
+
+        # Add the new task name into the POST data if it exists
+        if new_task_name:
+            request.POST = request.POST.copy()  # Make the POST data mutable
+            request.POST['task_name'] = new_task_name  # Set the new task name
+
+        # Add the new category name into the POST data if it exists
+        if new_category_name:
+            request.POST = request.POST.copy()  # Make the POST data mutable
+            request.POST['category'] = new_category_name  # Set the new category name
+
+        # Create form with POST data
+        form = TaskForm(request.POST)
+
         if form.is_valid():
             try:
-                # Get the user by username from the form data
-                assigned_user = User.objects.get(username=form.cleaned_data['assigned_to'])
-                
-                # Handle the category
-                category_name = form.cleaned_data['category']  # Get the selected category name
-                # Check if the category exists in the database, otherwise create it
+                # Handle new category
+                category_name = new_category_name if new_category_name else form.cleaned_data['category']
                 category, created = Category.objects.get_or_create(name=category_name)
-                
-                # Create and save the task in the database
+
+                # Get assigned user
+                assigned_user = User.objects.get(username=form.cleaned_data['assigned_to'])
+
+                # Save the task
                 task = Task.objects.create(
-                    task_name=form.cleaned_data['task_name'],  # Task name
-                    category=category,  # Link the category to the task
-                    assigned_to=assigned_user,  # Link the user to the task
-                    start_date=form.cleaned_data['start_date'],  # Task start date
-                    end_date=form.cleaned_data['end_date'],  # Task end date
+                    task_name=form.cleaned_data['task_name'],  # Task name (new or selected)
+                    category=category,  # Category for the task
+                    assigned_to=assigned_user,  # Assigned user
+                    start_date=form.cleaned_data['start_date'],  # Start date
+                    end_date=form.cleaned_data['end_date'],  # End date
                 )
-                
+
                 messages.success(request, 'Task has been created successfully!')
-                return redirect('create_task')  # Redirect to the task creation page
+                return redirect('create_task')
             except ObjectDoesNotExist:
                 messages.error(request, 'Selected user does not exist. Please choose a valid user.')
         else:
             messages.error(request, 'Form submission error. Please check the input data.')
-    
+
     else:
-        form = TaskForm()  # Initialize the form with empty data
+        form = TaskForm()
 
     context = {
         'form': form,
         'users': users,
         'categories': Category.objects.all(),
-        'tasks': tasks, 
+        'tasks': tasks,
     }
 
     return render(request, 'task_management_system_app/create_task.html', context)
+
 
 def save_to_excel(cleaned_data):
     excel_file_path = os.path.join(BASE_DIR, "Assigned_tasks.xlsx")
@@ -387,11 +414,15 @@ def delete_task(request, task_id):
     if request.method == 'POST':  # Confirm deletion by POST request
         task.delete()  # Delete the task
         messages.success(request, 'Task deleted successfully!')
+
+        # Check if the request is an AJAX request and respond accordingly
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})  # Return a JSON response for AJAX
-        return redirect('home')  # Redirect to the home page or task list
 
-    return render(request, 'task_management_system_app/delete_task_confirm.html', {'task': task})
+        return redirect('view_task_list')  # Redirect back to task list after deletion
+
+    # If not a POST request, return an error
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @login_required
 @admin_required
@@ -399,6 +430,9 @@ def view_task_list(request):
     # Get the 'from_date' and 'to_date' from the GET request
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
+    
+    # Get the current date to filter tasks by today's date
+    today = datetime.today().date()
 
     # Filter tasks for the logged-in user (for regular users)
     tasks = Task.objects.all()
@@ -412,6 +446,10 @@ def view_task_list(request):
         if to_date:
             to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
             tasks = tasks.filter(end_date__lte=to_date)
+            
+        else:
+            # Default to today's date if no date filter is provided
+            tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
     else:
         # Regular users can see their own tasks only
         tasks = tasks.filter(assigned_to=request.user)
@@ -423,6 +461,9 @@ def view_task_list(request):
         if to_date:
             to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
             tasks = tasks.filter(end_date__lte=to_date)
+        else:
+            # Default to today's date if no date filter is provided
+            tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
     return render(request, 'view_task_list.html', {'tasks': tasks, 'from_date': from_date, 'to_date': to_date})
 
