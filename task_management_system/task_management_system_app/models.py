@@ -14,6 +14,6 @@ class Task(models.Model):
     assigned_to = models.CharField(max_length=255)
     start_date = models.DateField()
     end_date = models.DateField()
-
+    date_assigned = models.DateField(null=True, blank=True)
     def __str__(self):
         return self.task_name

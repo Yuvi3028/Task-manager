@@ -6,9 +6,7 @@
     <title>Add Task</title>
     <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
-    
     <style>
-        /* Toast Notification Styling */
         .toast {    
             position: fixed;
             top: 20px;
@@ -33,12 +31,16 @@
         <br />
         
         <!-- Show success or error messages -->
-
+        {% if messages %}
+            <div class="toast show" id="successToast">
+                {{ messages }}
+            </div>
+        {% endif %}
 
         <!-- Form -->
-        <form method="post" action="{% url 'create_task' %}">
+        <form method="post" action="{% url 'create_task' %}" id="create-task-form">
             {% csrf_token %}
-            
+
             <!-- Dropdown for Existing Task -->
             <div class="form-group">
                 <label for="task_select">Select Task:</label>
@@ -49,94 +51,109 @@
                     {% endfor %}
                 </select>
             </div>
-        
+
             <!-- Input for New Task Name -->
             <div class="form-group">
                 <label for="new_task_name">Task Name (if creating a new task):</label>
                 <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
             </div>
-            
-            <!-- Category Dropdown -->
-            <div class="form-group">
-                <label for="categorySelect">Select Category:</label>
-                <select class="form-control" id="categorySelect" name="category">
-                    <option value="" disabled selected>Select a category</option>
-                    {% for category in categories %}
-                        <option value="{{ category.name }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        
-            <!-- Input for New Category Name -->
-            <div class="form-group">
-                <label for="new_category_name">Category Name (if creating a new category):</label>
-                <input type="text" class="form-control" id="new_category_name" name="new_category_name" placeholder="Enter new category name">
-            </div>
-        
+
             <!-- Assigned User Dropdown -->
             <div class="form-group">
                 <label for="assigned_to">Assign to:</label>
-                <select class="form-control" id="assigned_to" name="assigned_to" required>
+                <select class="form-control" id="assigned_to" name="assigned_to">
                     <option value="" disabled selected>Select user</option>
                     {% for user in users %}
                         <option value="{{ user.username }}">{{ user.username }}</option>
                     {% endfor %}
                 </select>
             </div>
-        
+
             <!-- Start Date -->
             <div class="form-group">
                 <label for="start_date">Start Date:</label>
                 <input type="date" id="start_date" name="start_date" required>
             </div>
-        
+
             <!-- End Date -->
             <div class="form-group">
                 <label for="end_date">End Date:</label>
                 <input type="date" id="end_date" name="end_date" required>
             </div>
-        
-            <button type="submit" class="btn btn-primary">Submit</button>
+
+            <button type="button" class="btn btn-primary" id="submit_button">Submit</button>
             <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
         </form>
     </div>
-    
-    <!-- Success Toast Notification -->
+
     <div class="toast" id="successToast">
         Task has been created successfully!
     </div>
 
     <!-- Include JS files -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
-    <!-- Validation Script -->
+
     <script>
-        // Form validation to ensure start date is before end date
-        function validateForm() {
-            var startDate = document.getElementById('start_date').value;
-            var endDate = document.getElementById('end_date').value;
-
-            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-                alert('Start date cannot be later than end date');
-                return false;
-            }
-            return true;
-        }
-
-        // Show success toast if there's a success message
-        {% if messages %}
         $(document).ready(function() {
-            // Show the toast notification
-            $('#successToast').addClass('show');
-            
-            // Automatically hide the toast after 3 seconds
-            setTimeout(function() {
-                $('#successToast').removeClass('show');
-            }, 3000); // Hide after 3 seconds
+            $('#submit_button').on('click', function() {
+                var startDate = $('#start_date').val();
+                var endDate = $('#end_date').val();
+
+                if (startDate && endDate) {
+                    // Array of tasks and users
+                    var tasks = [{% for task in tasks %}"{{ task }}", {% endfor %}];
+                    var users = [{% for user in users %}"{{ user.username }}", {% endfor %}];
+
+                    // Shuffle tasks randomly
+                    var shuffledTasks = shuffleArray(tasks);
+
+                    // Ensure that all tasks are assigned to users
+                    if (shuffledTasks.length > 0 && users.length > 0) {
+                        var assignments = [];
+
+                        // Assign tasks randomly to users
+                        for (var i = 0; i < shuffledTasks.length; i++) {
+                            // Randomly select a user for each task
+                            var randomUser = users[Math.floor(Math.random() * users.length)];
+
+                            // Create assignment object
+                            assignments.push({
+                                task: shuffledTasks[i],
+                                user: randomUser, // Randomly assigned user
+                                start_date: startDate,
+                                end_date: endDate
+                            });
+                        }
+
+                        // Log assignments to console for debugging
+                        console.log('Assignments:', assignments);
+
+                        // Now submit the form for each task/user assignment
+                        assignments.forEach(function(assignment) {
+                            $('#task_select').val(assignment.task);  // Update task field
+                            $('#assigned_to').val(assignment.user);  // Assign task to user
+                            $('#start_date').val(assignment.start_date);  // Set start date
+                            $('#end_date').val(assignment.end_date);  // Set end date
+
+                            // Submit the form for each task/user assignment
+                            $('#create-task-form').submit();
+                        });
+                    }
+                } else {
+                    alert("Please select a valid date range.");
+                }
+            });
+
+            // Function to shuffle an array randomly
+            function shuffleArray(array) {
+                for (var i = array.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];  // Swap elements
+                }
+                return array;
+            }
         });
-        {% endif %}
     </script>
 </body>
 </html>

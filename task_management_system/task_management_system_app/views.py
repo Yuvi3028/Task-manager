@@ -258,58 +258,55 @@ def create_task(request):
         print("Error loading Excel file:", e)
         tasks = []
 
-    # Fetch users from the database
-    users = User.objects.all()
+    # Fetch users from the database, excluding the admin user
+    users = User.objects.exclude(username='admin')
 
     if request.method == 'POST':
-        # Get new task and category names from POST data
-        new_task_name = request.POST.get('new_task_name')
-        new_category_name = request.POST.get('new_category_name')
+        # Get the start and end dates from the form
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
 
-        # Add the new task name into the POST data if it exists
-        if new_task_name:
-            request.POST = request.POST.copy()  # Make the POST data mutable
-            request.POST['task_name'] = new_task_name  # Set the new task name
+        # Validate the dates
+        if not start_date or not end_date:
+            messages.error(request, 'Please select both start and end dates.')
+            return redirect('create_task')
 
-        # Add the new category name into the POST data if it exists
-        if new_category_name:
-            request.POST = request.POST.copy()  # Make the POST data mutable
-            request.POST['category'] = new_category_name  # Set the new category name
+        # If there are tasks and users, proceed to automatically assign tasks
+        if tasks and users:
+            # Shuffle the list of tasks to randomize the order
+            random.shuffle(tasks)
 
-        # Create form with POST data
-        form = TaskForm(request.POST)
+            # Shuffle users as well
+            shuffled_users = list(users)  # List of all users
+            random.shuffle(shuffled_users)
 
-        if form.is_valid():
-            try:
-                # Handle new category
-                category_name = new_category_name if new_category_name else form.cleaned_data['category']
-                category, created = Category.objects.get_or_create(name=category_name)
+            # Track assignments to ensure each task is assigned to a user
+            task_assignments = []
 
-                # Get assigned user
-                assigned_user = User.objects.get(username=form.cleaned_data['assigned_to'])
-
-                # Save the task
-                task = Task.objects.create(
-                    task_name=form.cleaned_data['task_name'],  # Task name (new or selected)
-                    category=category,  # Category for the task
-                    assigned_to=assigned_user,  # Assigned user
-                    start_date=form.cleaned_data['start_date'],  # Start date
-                    end_date=form.cleaned_data['end_date'],  # End date
+            # Assign tasks to users in a random order
+            for i, task_name in enumerate(tasks):
+                assigned_user = shuffled_users[i % len(shuffled_users)]  # Assign to a user randomly
+                # Create the task for the user
+                Task.objects.create(
+                    task_name=task_name,
+                    category=Category.objects.first(),  # Use the first available category or choose based on your logic
+                    assigned_to=assigned_user,
+                    start_date=start_date,
+                    end_date=end_date
                 )
+                task_assignments.append(task_name)
 
-                messages.success(request, 'Task has been created successfully!')
-                return redirect('create_task')
-            except ObjectDoesNotExist:
-                messages.error(request, 'Selected user does not exist. Please choose a valid user.')
+            messages.success(request, f'{len(task_assignments)} tasks have been automatically assigned to users successfully!')
+            return redirect('create_task')
         else:
-            messages.error(request, 'Form submission error. Please check the input data.')
+            messages.error(request, 'No tasks or users found to assign tasks to.')
 
     else:
         form = TaskForm()
 
     context = {
         'form': form,
-        'users': users,
+        'users': users,  # Pass the filtered users to the template
         'categories': Category.objects.all(),
         'tasks': tasks,
     }

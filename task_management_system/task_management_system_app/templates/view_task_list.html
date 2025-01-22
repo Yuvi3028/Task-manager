@@ -159,7 +159,7 @@
                 <thead>
                     <tr>
                         <th>Task Name</th>
-                        <th>Category</th>
+                        
                         <th>Assigned User</th>
                         <th>Start Date</th>
                         <th>End Date</th>
@@ -170,12 +170,12 @@
                     {% for task in tasks %}
                         <tr>
                             <td>{{ task.task_name }}</td>
-                            <td>{{ task.category }}</td>
+                            
                             <td>{{ task.assigned_to }}</td>
                             <td>{{ task.start_date }}</td>
                             <td>{{ task.end_date }}</td>
                             <td>
-                                <a href="{% url 'update_task' task.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                {% comment %} <a href="{% url 'update_task' task.id %}" class="btn btn-warning btn-sm">Edit</a> {% endcomment %}
                                 <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ task.id }}, '{{ task.task_name }}')">Delete</button>
                             </td>
                         </tr>
