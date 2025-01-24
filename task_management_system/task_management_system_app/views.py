@@ -15,6 +15,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.timezone import is_aware, make_naive
 from .models import Task
+from dateutil import parser
 import datetime
 from datetime import datetime
 import pandas as pd
@@ -189,7 +190,7 @@ def download_tasks(request):
     tasks_data = {
         'Task Name': [task.task_name for task in tasks],
         'Assigned To': [task.assigned_to for task in tasks],
-        'Category': [task.category for task in tasks],
+        # 'Category': [task.category for task in tasks],
         'Start Date': [task.start_date.replace(tzinfo=None) if isinstance(task.start_date, datetime) and is_aware(task.start_date) else task.start_date for task in tasks],  # Make datetime timezone unaware
         'End Date': [task.end_date.replace(tzinfo=None) if isinstance(task.end_date, datetime) and is_aware(task.end_date) else task.end_date for task in tasks],  # Make datetime timezone unaware
     }
@@ -286,14 +287,36 @@ def create_task(request):
     if request.method == 'POST':
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
+        new_task_name = request.POST.get('new_task_name')  # New task entered by the user
+        assigned_to = request.POST.get('assigned_to')  # User selected for the task
 
         # Validate the dates
         if not start_date or not end_date:
             messages.error(request, 'Please select both start and end dates.')
             return redirect('create_task')
 
-        # If there are tasks and selected users, proceed to automatically assign tasks
-        if tasks and users_list:
+        # Case 1: If new task name and assigned user are provided, create the task manually
+        if new_task_name and assigned_to:
+            try:
+                assigned_user = User.objects.get(username=assigned_to)  # Get the selected user from DB
+
+                # Create and save the new task
+                Task.objects.create(
+                    task_name=new_task_name,
+                    assigned_to=assigned_user,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+
+                messages.success(request, f"Task '{new_task_name}' has been created and assigned to {assigned_to}.")
+                return redirect('create_task')
+
+            except User.DoesNotExist:
+                messages.error(request, 'The selected user does not exist.')
+                return redirect('create_task')
+
+        # Case 2: If no new task is entered, proceed to automatic task assignment from the Excel or predefined tasks
+        elif tasks and users_list:
             # Shuffle the list of tasks to randomize the order
             random.shuffle(tasks)
 
@@ -317,6 +340,7 @@ def create_task(request):
 
             messages.success(request, f'{len(task_assignments)} tasks have been automatically assigned to users successfully!')
             return redirect('create_task')
+
         else:
             messages.error(request, 'No tasks or users found to assign tasks to.')
 
@@ -427,11 +451,20 @@ def delete_task(request, task_id):
         task.delete()  # Delete the task
         messages.success(request, 'Task deleted successfully!')
 
+        # Capture the date range from the request GET parameters
+        from_date = request.GET.get('from_date', None)
+        to_date = request.GET.get('to_date', None)
+
         # Check if the request is an AJAX request and respond accordingly
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})  # Return a JSON response for AJAX
 
-        return redirect('view_task_list')  # Redirect back to task list after deletion
+        # Redirect back to the task list with the same date range
+        if from_date and to_date:
+            return redirect(f'{request.path}?from_date={from_date}&to_date={to_date}')
+
+        # If no date range is provided, redirect to the general task list page
+        return redirect('view_task_list')
 
     # If not a POST request, return an error
     return JsonResponse({'error': 'Invalid request method'}, status=400)
@@ -452,12 +485,18 @@ def view_task_list(request):
     if request.user.is_superuser:
         # Admins can see all tasks
         if from_date:
-            from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
-            tasks = tasks.filter(start_date__gte=from_date)
+            try:
+                from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
+                tasks = tasks.filter(start_date__gte=from_date)
+            except ValueError:
+                messages.error(request, f"Invalid 'from_date' format: {from_date}")
 
         if to_date:
-            to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
-            tasks = tasks.filter(end_date__lte=to_date)
+            try:
+                to_date = parser.parse(to_date).date()  # Use dateutil.parser to handle flexible formats
+                tasks = tasks.filter(end_date__lte=to_date)
+            except ValueError:
+                messages.error(request, f"Invalid 'to_date' format: {to_date}")
             
         else:
             # Default to today's date if no date filter is provided
@@ -467,12 +506,18 @@ def view_task_list(request):
         tasks = tasks.filter(assigned_to=request.user)
 
         if from_date:
-            from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
-            tasks = tasks.filter(start_date__gte=from_date)
+            try:
+                from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
+                tasks = tasks.filter(start_date__gte=from_date)
+            except ValueError:
+                messages.error(request, f"Invalid 'from_date' format: {from_date}")
 
         if to_date:
-            to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
-            tasks = tasks.filter(end_date__lte=to_date)
+            try:
+                to_date = parser.parse(to_date).date()  # Use dateutil.parser to handle flexible formats
+                tasks = tasks.filter(end_date__lte=to_date)
+            except ValueError:
+                messages.error(request, f"Invalid 'to_date' format: {to_date}")
         else:
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)

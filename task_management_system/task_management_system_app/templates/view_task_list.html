@@ -211,8 +211,8 @@
                 <div class="modal-footer">
                     <form id="deleteForm" method="POST">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                        <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'view_task_list' %}'">Cancel</button>
+                        <button type="button" class="btn btn-danger" onclick="window.location.href='{% url 'view_task_list' %}?from_date={{ from_date }}&to_date={{ to_date }}'">Delete</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'view_task_list' %}?from_date={{ from_date }}&to_date={{ to_date }}'">Cancel</button>
                     </form>
                 </div>
             </div>

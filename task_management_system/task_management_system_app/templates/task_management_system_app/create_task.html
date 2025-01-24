@@ -100,52 +100,62 @@
             $('#submit_button').on('click', function() {
                 var startDate = $('#start_date').val();
                 var endDate = $('#end_date').val();
-
+                var newTaskName = $('#new_task_name').val();  // Get the new task name
+                var assignedUser = $('#assigned_to').val();  // Get the user selected in the dropdown
+                var isManualTask = newTaskName && newTaskName.trim() !== "";  // Check if the user entered a new task
+        
                 if (startDate && endDate) {
-                    // Array of tasks and users
                     var tasks = [{% for task in tasks %}"{{ task }}", {% endfor %}];
                     var users = [{% for user in users %}"{{ user.username }}", {% endfor %}];
-
-                    // Shuffle tasks randomly
-                    var shuffledTasks = shuffleArray(tasks);
-
-                    // Ensure that all tasks are assigned to users
-                    if (shuffledTasks.length > 0 && users.length > 0) {
+        
+                    // If a new task is entered, add it to the tasks list
+                    if (isManualTask) {
+                        // Manually add the new task and selected user to the form
+                        $('#task_select').val(newTaskName);  // Set the new task in the dropdown
+                        $('#assigned_to').val(assignedUser);  // Set the selected user in the dropdown
+                        $('#start_date').val(startDate);  // Set start date
+                        $('#end_date').val(endDate);  // Set end date
+        
+                        // Submit the form for the manual task creation
+                        $('#create-task-form').submit();
+                        return;  // Exit after submitting the manual task
+                    }
+        
+                    // If no new task is entered, proceed with automatic task assignment
+                    if (tasks.length > 0 && users.length > 0) {
+                        var shuffledTasks = shuffleArray(tasks);  // Shuffle tasks randomly
+        
                         var assignments = [];
-
                         // Assign tasks randomly to users
                         for (var i = 0; i < shuffledTasks.length; i++) {
-                            // Randomly select a user for each task
                             var randomUser = users[Math.floor(Math.random() * users.length)];
-
-                            // Create assignment object
+        
                             assignments.push({
                                 task: shuffledTasks[i],
-                                user: randomUser, // Randomly assigned user
+                                user: randomUser,
                                 start_date: startDate,
                                 end_date: endDate
                             });
                         }
-
+        
                         // Log assignments to console for debugging
                         console.log('Assignments:', assignments);
-
+        
                         // Now submit the form for each task/user assignment
                         assignments.forEach(function(assignment) {
-                            $('#task_select').val(assignment.task);  // Update task field
-                            $('#assigned_to').val(assignment.user);  // Assign task to user
-                            $('#start_date').val(assignment.start_date);  // Set start date
-                            $('#end_date').val(assignment.end_date);  // Set end date
-
-                            // Submit the form for each task/user assignment
-                            $('#create-task-form').submit();
+                            $('#task_select').val(assignment.task);
+                            $('#assigned_to').val(assignment.user);
+                            $('#start_date').val(assignment.start_date);
+                            $('#end_date').val(assignment.end_date);
+        
+                            $('#create-task-form').submit();  // Submit the form for each assignment
                         });
                     }
                 } else {
                     alert("Please select a valid date range.");
                 }
             });
-
+        
             // Function to shuffle an array randomly
             function shuffleArray(array) {
                 for (var i = array.length - 1; i > 0; i--) {
