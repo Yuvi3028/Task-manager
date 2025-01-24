@@ -80,40 +80,44 @@ class LoginForm(AuthenticationForm):
 def home(request):
     # Get today's date
     today = datetime.today().date()
+    users = User.objects.exclude(username='admin')  # Exclude admin user from regular users
+
+    # Get the selected users from the GET parameters (for admin only)
+    selected_users = request.GET.getlist('selected_users')  # List of selected users (array of usernames)
 
     # Initialize from_date and to_date as None by default
-    from_date = None
-    to_date = None
+    from_date = request.GET.get('from_date', None)
+    to_date = request.GET.get('to_date', None)
+
     tasks = Task.objects.all()  # Default to all tasks initially
 
     # Handle date range filter if provided in the GET request
-    if 'from_date' in request.GET and 'to_date' in request.GET:
+    if from_date and to_date:
         try:
             # Parse the from_date and to_date from the GET request
-            from_date = datetime.strptime(request.GET['from_date'], '%Y-%m-%d').date()
-            to_date = datetime.strptime(request.GET['to_date'], '%Y-%m-%d').date()
+            from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+            to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
 
             # Filter tasks based on the date range
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
         except ValueError:
             pass  # Handle invalid date format gracefully
 
-    # Admin view: show tasks for all users and generate task distribution chart
+    # Admin view: show tasks for all users and allow user selection for filtering tasks
     if request.user.is_superuser:
-        users = User.objects.all()
         task_counts = {}
         task_names = {}
 
         # If no date range is selected (i.e., from_date and to_date are None), filter for today's tasks
         if not from_date and not to_date:
             tasks = Task.objects.filter(start_date__lte=today, end_date__gte=today)
-        
+
         # Fetch tasks assigned to each user (considering the date filters)
         for user in users:
             # Exclude the admin user from the chart
             if user.is_superuser:
                 continue
-            
+
             user_tasks = tasks.filter(assigned_to=user)
             task_counts[user.username] = user_tasks.count()
             task_names[user.username] = [task.task_name for task in user_tasks]
@@ -123,7 +127,11 @@ def home(request):
         task_counts_values = list(task_counts.values())
         task_names_values = list(task_names.values())
 
-        # Render the template with chart data, filtered tasks, and filter parameters
+        # Store selected users in session
+        if selected_users:
+            request.session['selected_users'] = selected_users
+
+        # Render the template with task distribution chart data, filtered tasks, and selected users
         return render(request, 'home.html', {
             'user_names': json.dumps(user_names),
             'task_counts_values': json.dumps(task_counts_values),
@@ -131,25 +139,32 @@ def home(request):
             'tasks': tasks,  # Pass the filtered tasks to the template
             'from_date': from_date,
             'to_date': to_date,
+            'users': users,
+            'selected_users': selected_users,  # Pass selected users to the template for admin
         })
     
     # For regular users: filter tasks for the logged-in user and the selected date range
     else:
+        # Regular users only see their own tasks, no user selection dropdown
         tasks = tasks.filter(assigned_to=request.user)
 
+        # Apply date range filters if provided
         if from_date and to_date:
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
         else:
             # Default to today's tasks if no date range is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
-        # Render the template with tasks assigned to the user
+        # Render the template with tasks assigned to the logged-in user and filter parameters
         return render(request, 'home.html', {
             'tasks': tasks,
             'from_date': from_date,
             'to_date': to_date,
+            'users': users,
+            'selected_users': selected_users,  # Pass selected users here for the admin view
         })
-
+        
+        
 # Add a view for downloading tasks in Excel format
 @login_required
 def download_tasks(request):
@@ -258,11 +273,17 @@ def create_task(request):
         print("Error loading Excel file:", e)
         tasks = []
 
-    # Fetch users from the database, excluding the admin user
-    users = User.objects.exclude(username='admin')
+    # Get selected users from the session (store the selected users in session in the home view)
+    selected_users_usernames = request.session.get('selected_users', [])
+    
+    # Fetch users from the database, excluding the admin user, and filter by selected usernames
+    users = User.objects.filter(username__in=selected_users_usernames)
 
+    # Convert QuerySet to a list so we can shuffle it
+    users_list = list(users)
+
+    # Handle task creation when form is submitted
     if request.method == 'POST':
-        # Get the start and end dates from the form
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
 
@@ -271,25 +292,23 @@ def create_task(request):
             messages.error(request, 'Please select both start and end dates.')
             return redirect('create_task')
 
-        # If there are tasks and users, proceed to automatically assign tasks
-        if tasks and users:
+        # If there are tasks and selected users, proceed to automatically assign tasks
+        if tasks and users_list:
             # Shuffle the list of tasks to randomize the order
             random.shuffle(tasks)
 
-            # Shuffle users as well
-            shuffled_users = list(users)  # List of all users
-            random.shuffle(shuffled_users)
+            # Shuffle selected users as well (if needed)
+            random.shuffle(users_list)
 
             # Track assignments to ensure each task is assigned to a user
             task_assignments = []
 
             # Assign tasks to users in a random order
             for i, task_name in enumerate(tasks):
-                assigned_user = shuffled_users[i % len(shuffled_users)]  # Assign to a user randomly
+                assigned_user = users_list[i % len(users_list)]  # Assign to a user randomly
                 # Create the task for the user
                 Task.objects.create(
                     task_name=task_name,
-                    category=Category.objects.first(),  # Use the first available category or choose based on your logic
                     assigned_to=assigned_user,
                     start_date=start_date,
                     end_date=end_date
@@ -301,14 +320,10 @@ def create_task(request):
         else:
             messages.error(request, 'No tasks or users found to assign tasks to.')
 
-    else:
-        form = TaskForm()
-
+    # Render the template with the users selected on the home page and tasks to assign
     context = {
-        'form': form,
-        'users': users,  # Pass the filtered users to the template
-        'categories': Category.objects.all(),
-        'tasks': tasks,
+        'users': users_list,  # List of selected users
+        'tasks': tasks,  # List of tasks (can be populated from Excel or manual input)
     }
 
     return render(request, 'task_management_system_app/create_task.html', context)

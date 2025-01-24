@@ -10,8 +10,9 @@ class Category(models.Model):
 
 class Task(models.Model):
     task_name = models.CharField(max_length=255)
-    category = models.CharField(max_length=255)
-    assigned_to = models.CharField(max_length=255)
+    # category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    # assigned_to = models.CharField(max_length=255)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # ForeignKey to User
     start_date = models.DateField()
     end_date = models.DateField()
     date_assigned = models.DateField(null=True, blank=True)

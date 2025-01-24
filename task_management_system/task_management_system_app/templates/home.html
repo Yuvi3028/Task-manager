@@ -152,6 +152,27 @@
             </div>
         </form>
 
+        <form method="GET" action="{% url 'home' %}">
+            <h3>Select Users for Today:</h3>
+            <div>
+                {% for user in users %}
+                    <input type="checkbox" name="selected_users" value="{{ user.username }}" id="user_{{ user.id }}"
+                        {% if user.username in selected_users %} checked {% endif %}>
+                    <label for="user_{{ user.id }}">{{ user.username }}</label><br>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary">Select Users</button>
+        </form>
+
+        {% comment %} <form method="GET" action="{% url 'home' %}">
+            <label>Select Users:</label><br>
+            {% for user in users %}
+                <input type="checkbox" name="selected_users" value="{{ user.username }}" 
+                    {% if user.username in selected_users %} checked {% endif %}> {{ user.username }}<br>
+            {% endfor %}
+            <button type="submit">Select Users</button>
+        </form> {% endcomment %}
+
         {% if user.is_superuser %}
             <!-- Admin Dashboard -->
             <h2 class="text-center mt-5">Admin Dashboard</h2>
