@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Add Task</title>
+    <title>Add Daily Task</title> <!-- Change title to differentiate the pages -->
     <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
     <style>
@@ -27,19 +27,23 @@
 </head>
 <body>
     <div class="container mt-5">
-        <h2 class="text-center">Create Hourly Task</h2>
+        <h2 class="text-center">Create Daily Task</h2> <!-- Change title here too -->
         <br />
         
         <!-- Show success or error messages -->
         {% if messages %}
             <div class="toast show" id="successToast">
-                {{ messages }}
+                {% for message in messages %}
+                    <div>{{ message }}</div>
+                {% endfor %}
             </div>
         {% endif %}
 
         <!-- Form -->
-        <form method="post" action="{% url 'create_task' %}" id="create-task-form">
+        <form method="post" action="{% url 'create_daily_task' %}" id="create-daily_task-form">
             {% csrf_token %}
+
+            
 
             <!-- Dropdown for Existing Task -->
             <div class="form-group">
@@ -52,13 +56,14 @@
                 </select>
             </div>
 
+
             <!-- Input for New Task Name -->
             <div class="form-group">
                 <label for="new_task_name">Task Name (if creating a new task):</label>
                 <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
             </div>
 
-            
+            <!-- Assign to User -->
             <div class="form-group">
                 <label for="assigned_to">Assign to:</label>
                 <select class="form-control" id="assigned_to" name="assigned_to">
@@ -68,7 +73,6 @@
                     {% endfor %}
                 </select>
             </div>
-        
 
             <!-- Start Date -->
             <div class="form-group">
@@ -148,7 +152,7 @@
                             $('#start_date').val(assignment.start_date);
                             $('#end_date').val(assignment.end_date);
         
-                            $('#create-task-form').submit();  // Submit the form for each assignment
+                            $('#create-daily_task-form').submit();  // Submit the form for each assignment
                         });
                     }
                 } else {

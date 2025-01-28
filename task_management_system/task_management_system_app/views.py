@@ -14,7 +14,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.timezone import is_aware, make_naive
-from .models import Task
 from dateutil import parser
 import datetime
 from datetime import datetime
@@ -48,7 +47,7 @@ def user_login(request):
             login(request, user)
             if user.is_superuser:
                 # Redirect admin users to admin dashboard
-                return redirect('category_list')
+                return redirect('home')
             else:
                 # Redirect regular users to their home page
                 return redirect('home')
@@ -260,29 +259,17 @@ class TaskForm(forms.Form):
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     category = forms.CharField(max_length=100) 
 
-@login_required
-def create_task(request):
+def load_tasks_from_excel(file_path):
     try:
-        # Load tasks from Excel file (optional part)
-        excel_file_path = "tasks.xlsx"
-        if os.path.exists(excel_file_path):
-            df = pd.read_excel(excel_file_path)
-            tasks = df['Task Name'].dropna().tolist()  # List of task names from the Excel file
-        else:
-            tasks = []
+        if os.path.exists(file_path):
+            df = pd.read_excel(file_path)
+            return df['Task Name'].dropna().tolist()  # List of task names from the Excel file
+        return []
     except Exception as e:
-        print("Error loading Excel file:", e)
-        tasks = []
+        print(f"Error loading Excel file: {e}")
+        return []
 
-    # Get selected users from the session (store the selected users in session in the home view)
-    selected_users_usernames = request.session.get('selected_users', [])
-    
-    # Fetch users from the database, excluding the admin user, and filter by selected usernames
-    users = User.objects.filter(username__in=selected_users_usernames)
-
-    # Convert QuerySet to a list so we can shuffle it
-    users_list = list(users)
-
+def assign_tasks(request, tasks, users_list, success_message, is_daily_task=False):
     # Handle task creation when form is submitted
     if request.method == 'POST':
         start_date = request.POST.get('start_date')
@@ -293,13 +280,12 @@ def create_task(request):
         # Validate the dates
         if not start_date or not end_date:
             messages.error(request, 'Please select both start and end dates.')
-            return redirect('create_task')
+            return redirect('create_daily_task' if is_daily_task else 'create_task')
 
         # Case 1: If new task name and assigned user are provided, create the task manually
         if new_task_name and assigned_to:
             try:
                 assigned_user = User.objects.get(username=assigned_to)  # Get the selected user from DB
-
                 # Create and save the new task
                 Task.objects.create(
                     task_name=new_task_name,
@@ -307,13 +293,12 @@ def create_task(request):
                     start_date=start_date,
                     end_date=end_date
                 )
-
                 messages.success(request, f"Task '{new_task_name}' has been created and assigned to {assigned_to}.")
-                return redirect('create_task')
+                return redirect('create_daily_task' if is_daily_task else 'create_task')
 
             except User.DoesNotExist:
                 messages.error(request, 'The selected user does not exist.')
-                return redirect('create_task')
+                return redirect('create_daily_task' if is_daily_task else 'create_task')
 
         # Case 2: If no new task is entered, proceed to automatic task assignment from the Excel or predefined tasks
         elif tasks and users_list:
@@ -339,81 +324,43 @@ def create_task(request):
                 task_assignments.append(task_name)
 
             messages.success(request, f'{len(task_assignments)} tasks have been automatically assigned to users successfully!')
-            return redirect('create_task')
+            return redirect('create_daily_task' if is_daily_task else 'create_task')
 
         else:
             messages.error(request, 'No tasks or users found to assign tasks to.')
 
-    # Render the template with the users selected on the home page and tasks to assign
-    context = {
-        'users': users_list,  # List of selected users
-        'tasks': tasks,  # List of tasks (can be populated from Excel or manual input)
-    }
+    # Rendering directly with hard-coded templates
+    return render(request, 'task_management_system_app/create_daily_task.html' if is_daily_task else 'task_management_system_app/create_task.html', {'users': users_list, 'tasks': tasks})
 
-    return render(request, 'task_management_system_app/create_task.html', context)
+@login_required
+def create_task(request):
+    excel_file_path = "tasks.xlsx"
+    tasks = load_tasks_from_excel(excel_file_path)
 
-
-def save_to_excel(cleaned_data):
-    excel_file_path = os.path.join(BASE_DIR, "Assigned_tasks.xlsx")
+    # Get selected users from the session (store the selected users in session in the home view)
+    selected_users_usernames = request.session.get('selected_users', [])
     
-    # Prepare the data dictionary
-    task_data = {
-        "Task Name": form.cleaned_data['task_name'],
-        "Category": form.cleaned_data['category'],
-        "Start Date": form.cleaned_data['start_date'],
-        "End Date": form.cleaned_data['end_date'],
-        # "Priority": form.cleaned_data['priority'],
-        # "Description": form.cleaned_data['description'],
-        # "Location": form.cleaned_data.get('location', ""),
-        # "Organizer": form.cleaned_data['organizer'],
-        "Assigned To": form.cleaned_data['assigned_to']  # Ensure this is populated
-    }
+    # Fetch users from the database, excluding the admin user, and filter by selected usernames
+    users = User.objects.filter(username__in=selected_users_usernames)
+    users_list = list(users)
 
-    # Log the data to ensure it's correct
-    print("Task Data to Save to Excel:", task_data)
+    # Call helper function to handle task creation
+    return assign_tasks(request, tasks, users_list, 'create_task', is_daily_task=False)
 
-    try:
-        # If file exists, append the new data to it
-        if os.path.exists(excel_file_path):
-            print("Excel file exists, reading existing data...")
-            df_existing = pd.read_excel(excel_file_path)
-            print("Existing Data Loaded:", df_existing)
-            df = pd.concat([df_existing, pd.DataFrame(task_data)], ignore_index=True)
-        else:
-            print("Excel file does not exist. Creating a new file...")
-            df = pd.DataFrame(task_data)
-        
-        # Log final DataFrame before saving
-        print("DataFrame to Save:", df)
+@login_required
+def create_daily_task(request):
+    excel_file_path = "tasks1.xlsx"
+    tasks = load_tasks_from_excel(excel_file_path)
 
-        # Write the data to Excel
-        df.to_excel(excel_file_path, index=False, engine='openpyxl')
-        print("Data saved to Excel successfully at:", excel_file_path)
-    except Exception as e:
-        print("Excel Save Error:", e)
+    # Get selected users from the session (store the selected users in session in the home view)
+    selected_users_usernames = request.session.get('selected_users', [])
+    
+    # Fetch users from the database, excluding the admin user, and filter by selected usernames
+    users = User.objects.filter(username__in=selected_users_usernames)
+    users_list = list(users)
 
-
-
-
-# @login_required
-# @admin_required
-# def update_task(request):
-#     task = Task.objects.all()
-#     if request.method == 'POST':
-#         # Update task fields based on form data
-#         task.name = request.POST.get('name')
-#         task.start_date = request.POST.get('start_date')
-#         task.end_date = request.POST.get('end_date')
-#         task.category = request.POST.get('category')
-#         # task.description = request.POST.get('description')
-#         # task.location = request.POST.get('location')
-#         # task.organizer = request.POST.get('organizer')
-#         task.assigned_to = request.POST.get('assigned_to')
-#         task.save()
-#         return redirect('home')
-#     else:
-#         # Render update task page with task data
-#         return render(request, 'task_management_system_app/update_task.html', {'task': task})
+    # Call helper function to handle task creation
+    return assign_tasks(request, tasks, users_list, 'create_daily_task', is_daily_task=True)
 
 @login_required
 def update_task(request, task_id):
