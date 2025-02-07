@@ -65,9 +65,11 @@ def user_tasks_list(request):
 
 
 class RegistrationForm(UserCreationForm):
+    email = forms.EmailField(required=True)  # Add this line for email field
+
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2']
+        fields = ['username', 'email', 'password1', 'password2']
 
 
 class LoginForm(AuthenticationForm):
@@ -214,7 +216,9 @@ def register(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # login(request, user)
+            user.email = form.cleaned_data.get('email')  # Save the email to the user instance
+            user.save()  # Don't forget to save the user instance with the email
+            # login(request, user)  # You can log in the user if you want
             return redirect('login')
     else:
         form = RegistrationForm()
