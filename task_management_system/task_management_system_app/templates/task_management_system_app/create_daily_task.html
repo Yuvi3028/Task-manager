@@ -121,7 +121,8 @@
                         $('#end_date').val(endDate);  // Set end date
         
                         // Submit the form for the manual task creation
-                        $('#create-task-form').submit();
+                        $('#create-daily_task-form').submit();  // For daily tasks
+                        $('#create-task-form').submit();  // For normal tasks
                         return;  // Exit after submitting the manual task
                     }
         
@@ -142,9 +143,6 @@
                             });
                         }
         
-                        // Log assignments to console for debugging
-                        console.log('Assignments:', assignments);
-        
                         // Now submit the form for each task/user assignment
                         assignments.forEach(function(assignment) {
                             $('#task_select').val(assignment.task);
@@ -152,7 +150,12 @@
                             $('#start_date').val(assignment.start_date);
                             $('#end_date').val(assignment.end_date);
         
-                            $('#create-daily_task-form').submit();  // Submit the form for each assignment
+                            // Submit the form for each assignment
+                            if (window.location.pathname.includes('create_daily_task')) {
+                                $('#create-daily_task-form').submit();  // For daily tasks
+                            } else {
+                                $('#create-task-form').submit();  // For normal tasks
+                            }
                         });
                     }
                 } else {
