@@ -104,6 +104,11 @@ def home(request):
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
         except ValueError:
             pass  # Handle invalid date format gracefully
+        
+    # Display login success message only once
+    if not request.session.get('has_logged_in', False):  # Check if the user has logged in before
+        messages.success(request, "Login Successfully!")  # Set message
+        request.session['has_logged_in'] = True  # Set flag to True
 
     # Admin view: show tasks for all users and allow user selection for filtering tasks
     if request.user.is_superuser:
@@ -131,8 +136,8 @@ def home(request):
 
         # Store selected users in session
         if selected_users:
-            request.session['selected_users'] = selected_users
-
+            request.session['selected_users'] = selected_users    
+            
         # Render the template with task distribution chart data, filtered tasks, and selected users
         return render(request, 'home.html', {
             'user_names': json.dumps(user_names),
@@ -230,6 +235,10 @@ def register(request):
 
 def LogoutPage(request):
     logout(request)
+    # if not request.session.get('has_logged_in', False):  # Check if the user has logged in before
+    #         messages.success(request, "Login Successfully!")  # Set message
+    #         request.session['has_logged_in'] = True  # Set flag to True
+    messages.success(request, "Logout Successfully!")
     return redirect("login")
 
 

@@ -5,17 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <style>
+      /* Custom styles for the logout success message */
+      .logout-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        background-color: #28a745;
+        color: white;
+        border-radius: 5px;
+        z-index: 9999;
+        display: none;  /* Initially hidden */
+      }
+    </style>
   </head>
   <body>
+
+    <!-- Logout Success Message -->
+    <div id="logoutMessage" class="logout-message">
+      Logout Successfully!
+    </div>
+
     <div class="container">
       <div class="row">
         <div class="col-md-6 offset-md-3">
           <h2 class="mt-4 mb-4">Login</h2>
+
+          <!-- Login Form -->
           <form method="post" class="mb-4">
             {% csrf_token %}
             {{ form.as_p }}
             <button type="submit" class="btn btn-primary">Login</button>
           </form>
+
           <p>
             Forgot your password? <a href="{% url 'forgot_password' %}" class="btn btn-link">Reset Password</a>
           </p>
@@ -25,5 +48,21 @@
         </div>
       </div>
     </div>
+
+    <script>
+      // Check if there are any messages to show
+      {% if messages %}
+        {% for message in messages %}
+          // If the message is "Logout Successfully!", display the pop-up
+          if ("{{ message }}" === "Logout Successfully!") {
+            document.getElementById('logoutMessage').style.display = 'block';
+            setTimeout(function() {
+              document.getElementById('logoutMessage').style.display = 'none';
+            }, 3000);  // Hide the message after 3 seconds
+          }
+        {% endfor %}
+      {% endif %}
+    </script>
+
   </body>
 </html>
