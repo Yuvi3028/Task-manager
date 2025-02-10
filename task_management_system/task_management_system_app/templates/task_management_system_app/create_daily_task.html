@@ -122,7 +122,7 @@
         
                         // Submit the form for the manual task creation
                         $('#create-daily_task-form').submit();  // For daily tasks
-                        $('#create-task-form').submit();  // For normal tasks
+                       
                         return;  // Exit after submitting the manual task
                     }
         
@@ -151,11 +151,10 @@
                             $('#end_date').val(assignment.end_date);
         
                             // Submit the form for each assignment
-                            if (window.location.pathname.includes('create_daily_task')) {
-                                $('#create-daily_task-form').submit();  // For daily tasks
-                            } else {
-                                $('#create-task-form').submit();  // For normal tasks
-                            }
+                            
+                            $('#create-daily_task-form').submit();  // For daily tasks
+                           
+                            
                         });
                     }
                 } else {
