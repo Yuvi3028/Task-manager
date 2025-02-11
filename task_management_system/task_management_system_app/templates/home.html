@@ -225,13 +225,13 @@
                 var taskData = {
                     labels: {{ user_names|safe }},  // User names
                     datasets: [{
-                        label: 'Tasks Assigned to Users',
+                        label: '',
                         data: {{ task_counts_values|safe }},  // Task counts
                         backgroundColor: function(context) {
                             var index = context.dataIndex;
                             return colors[index % colors.length];  // Assign colors dynamically
                         },
-                        borderColor: 'rgb(61, 196, 83)',  // Border color
+                        borderColor: 'rgb(70, 61, 196)',  // Border color
                         borderWidth: 1,
                         taskNames: {{ task_names_values|safe }}  // Store task names for tooltips
                     }]
@@ -262,6 +262,12 @@
                                         return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(', ');
                                     }
                                 }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false  // This hides the legend entirely
+                                
                             }
                         }
                     }
