@@ -408,8 +408,9 @@ def delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)  # Get the task by ID
 
     if request.method == 'POST':  # Confirm deletion by POST request
+        # task_name = task.task_name  # Save task name to display in the success message
         task.delete()  # Delete the task
-        messages.success(request, 'Task deleted successfully!')
+        messages.success(request, f"Task deleted successfully!")
 
         # Capture the date range from the request GET parameters
         from_date = request.GET.get('from_date', None)
@@ -419,9 +420,9 @@ def delete_task(request, task_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})  # Return a JSON response for AJAX
 
-        # Redirect back to the task list with the same date range
+        # Redirect back to the task list with the same date range (if provided)
         if from_date and to_date:
-            return redirect(f'{request.path}?from_date={from_date}&to_date={to_date}')
+            return redirect(f'/task-list/?from_date={from_date}&to_date={to_date}')
 
         # If no date range is provided, redirect to the general task list page
         return redirect('view_task_list')

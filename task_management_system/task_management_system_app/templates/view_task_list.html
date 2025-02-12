@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Sidebar styling and layout */
         .sidebar {
             position: fixed;
             top: 0;
@@ -103,6 +104,20 @@
             }
         }
 
+        /* Popup message style */
+        .popup-message {
+            position: fixed;
+            top: 20px;
+            right: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border-radius: 3px;
+            display: none; /* Initially hidden */
+            z-index: 9999;
+            font-size: 16px;
+        }
+
         /* Style for delete confirmation modal */
         .modal-backdrop {
             display: none;
@@ -113,6 +128,15 @@
     </style>
 </head>
 <body>
+
+    <!-- Display success message -->
+    {% if messages %}
+    <div class="popup-message" id="popupMessage">
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="user-info">
         <span>Welcome, {{ user.username }}</span> |
@@ -130,8 +154,6 @@
 
     <div class="content" id="mainContent">
         <h1>User's Task List</h1>
-
-
 
         <a href="{% url 'home' %}" class="btn btn-secondary mb-4">Back to Home</a>
 
@@ -160,7 +182,6 @@
                 <thead>
                     <tr>
                         <th>Task Name</th>
-                        
                         <th>Assigned User</th>
                         <th>Start Date</th>
                         <th>End Date</th>
@@ -171,18 +192,16 @@
                     {% for task in tasks %}
                         <tr>
                             <td>{{ task.task_name }}</td>
-                            
                             <td>{{ task.assigned_to }}</td>
                             <td>{{ task.start_date }}</td>
                             <td>{{ task.end_date }}</td>
                             <td>
-                                {% comment %} <a href="{% url 'update_task' task.id %}" class="btn btn-warning btn-sm">Edit</a> {% endcomment %}
                                 <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ task.id }}, '{{ task.task_name }}')">Delete</button>
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6">No tasks found for the selected date range.</td>
+                            <td colspan="5">No tasks found for the selected date range.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -210,11 +229,12 @@
                     <p>Are you sure you want to delete the task: <span id="taskName"></span>?</p>
                 </div>
                 <div class="modal-footer">
-                    <form id="deleteForm" method="POST">
+                    <!-- Delete button now submits the form -->
+                    <form id="deleteForm" method="POST" style="display: inline;">
                         {% csrf_token %}
-                        <button type="button" class="btn btn-danger" onclick="window.location.href='{% url 'view_task_list' %}?from_date={{ from_date }}&to_date={{ to_date }}'">Delete</button>
-                        <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'view_task_list' %}?from_date={{ from_date }}&to_date={{ to_date }}'">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -248,18 +268,23 @@
             var modal = document.getElementById('deleteModal');
             modal.classList.add('modal-show');
         }
+        
+        // Function to close the modal without submitting
+        function closeModal() {
+            var modal = document.getElementById('deleteModal');
+            modal.classList.remove('modal-show');
+        }
+
         // Show success toast if there's a success message
-        {% if messages %}
-        $(document).ready(function() {
-            // Show the toast notification
-            $('#successToast').addClass('show');
-            
-            // Automatically hide the toast after 3 seconds
-            setTimeout(function() {
-                $('#successToast').removeClass('show');
-            }, 3000); // Hide after 3 seconds
-        });
-        {% endif %}
+        window.onload = function() {
+            const popup = document.getElementById("popupMessage");
+            if (popup) {
+                popup.style.display = "block";
+                setTimeout(function() {
+                    popup.style.display = "none";
+                }, 1000); // Hide after 1 second
+            }
+        };
     </script>
 </body>
 </html>
