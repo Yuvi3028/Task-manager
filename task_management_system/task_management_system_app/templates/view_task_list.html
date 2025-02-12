@@ -178,34 +178,40 @@
         <div class="container mt-4">
             <h3 class="text-center">Task List</h3>
 
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th>Task Name</th>
-                        <th>Assigned User</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for task in tasks %}
+            <form method="POST" action="{% url 'delete_selected_tasks' %}">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between mb-3">
+                    <button type="submit" class="btn btn-danger">Delete Selected Tasks</button>
+                    {% comment %} <input type="checkbox" id="select-all"> Select All {% endcomment %}
+                </div>
+
+                <table class="table table-bordered table-striped">
+                    <thead>
                         <tr>
-                            <td>{{ task.task_name }}</td>
-                            <td>{{ task.assigned_to }}</td>
-                            <td>{{ task.start_date }}</td>
-                            <td>{{ task.end_date }}</td>
-                            <td>
-                                <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ task.id }}, '{{ task.task_name }}')">Delete</button>
-                            </td>
+                            <th><input type="checkbox" id="select-all" class="select-checkbox"> Select</th> <!-- Updated id for easier targeting -->
+                            <th>Task Name</th>
+                            <th>Assigned User</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
                         </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5">No tasks found for the selected date range.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr>
+                                <td><input type="checkbox" name="tasks_to_delete" value="{{ task.id }}" class="task-checkbox"></td>
+                                <td>{{ task.task_name }}</td>
+                                <td>{{ task.assigned_to }}</td>
+                                <td>{{ task.start_date }}</td>
+                                <td>{{ task.end_date }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">No tasks found for the selected date range.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
         </div>
 
         <div class="text-center mt-4">
@@ -243,6 +249,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Sidebar toggle function
         function toggleSidebar() {
             var sidebar = document.getElementById('sidebarMenu');
             var mainContent = document.getElementById('mainContent');
@@ -255,26 +262,31 @@
                 mainContent.style.marginLeft = '0';
             }
         }
-
+    
+        // Select/Deselect all checkboxes (top checkbox selects all task checkboxes)
+        document.getElementById('select-all').addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('.task-checkbox');
+            var isChecked = this.checked; // Get the state of the top checkbox
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = isChecked; // Set the state of each task checkbox to match the top checkbox
+            });
+        });
+    
+        // Function to confirm deletion
         function confirmDelete(taskId, taskName) {
-            // Set the task name in the modal
             document.getElementById('taskName').innerText = taskName;
-        
-            // Set the action URL for the delete form with the correct task ID
             var deleteForm = document.getElementById('deleteForm');
             deleteForm.action = "/task/" + taskId + "/delete/";  // Correct URL format for task deletion
-        
-            // Show the modal
             var modal = document.getElementById('deleteModal');
             modal.classList.add('modal-show');
         }
-        
-        // Function to close the modal without submitting
+    
+        // Close the modal
         function closeModal() {
             var modal = document.getElementById('deleteModal');
             modal.classList.remove('modal-show');
         }
-
+    
         // Show success toast if there's a success message
         window.onload = function() {
             const popup = document.getElementById("popupMessage");

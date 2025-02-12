@@ -432,6 +432,30 @@ def delete_task(request, task_id):
 
 @login_required
 @admin_required
+def delete_selected_tasks(request):
+    if request.method == 'POST':
+        # Get selected task IDs from the POST data
+        task_ids = request.POST.getlist('tasks_to_delete')
+        
+        if task_ids:
+            # Try to get all tasks that match the selected IDs
+            tasks = Task.objects.filter(id__in=task_ids)
+            
+            # Delete the tasks
+            tasks.delete()
+            
+            messages.success(request, f"Selected tasks deleted successfully!")
+        else:
+            messages.error(request, "No tasks selected for deletion.")
+        
+        # Redirect back to the task list page
+        return redirect('view_task_list')
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@login_required
+@admin_required
 def view_task_list(request):
     # Get the 'from_date' and 'to_date' from the GET request
     from_date = request.GET.get('from_date')
