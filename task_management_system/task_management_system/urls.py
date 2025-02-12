@@ -18,11 +18,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from task_management_system_app import views
+from django.shortcuts import redirect
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth.views import LogoutView
 
+
+def redirect_to_login(request):
+    return redirect('/login')
+
 urlpatterns = [
+    path('', redirect_to_login),
     path('admin/', admin.site.urls),
     path('user/', views.user_tasks_list, name='user_tasks_list'),
     path('accounts/', include('django.contrib.auth.urls')),

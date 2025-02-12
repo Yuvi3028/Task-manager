@@ -252,22 +252,20 @@
                             tooltip: {
                                 callbacks: {
                                     title: function(tooltipItem) {
-                                        return tooltipItem[0].label;  // Show user's name in tooltip title
+                                        return tooltipItem[0].label;  // User's name
                                     },
                                     label: function(tooltipItem) {
                                         var userIndex = tooltipItem.dataIndex;
                                         var taskCount = tooltipItem.raw;
-                                        var taskNames = taskData.datasets[0].taskNames[userIndex];  // Task names for user
+                                        var taskNames = taskData.datasets[0].taskNames[userIndex];  // Task names for the user
                                         
-                                        return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(', ');
+                                        // Display the task count and the names of tasks
+                                        return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(' ');
                                     }
                                 }
-                            }
-                        },
-                        plugins: {
+                            },
                             legend: {
-                                display: false  // This hides the legend entirely
-                                
+                                display: false  // Hides the legend
                             }
                         }
                     }
