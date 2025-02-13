@@ -529,24 +529,27 @@ def view_task_list(request):
     })
 
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
-def update_assigned_user(request):
-    if request.method == 'POST' and request.is_ajax():
-        data = json.loads(request.body)
-        task_id = data.get('task_id')
-        assigned_user_id = data.get('assigned_user_id')
+def change_assigned_user(request, task_id):
+    # Get the task based on task_id
+    task = get_object_or_404(Task, id=task_id)
+    
+    # Get the new assigned user from the form data
+    assigned_to_username = request.POST.get('assigned_to')
+    
+    # Get the user object associated with the selected username
+    assigned_to_user = User.objects.filter(username=assigned_to_username).first()
+    
+    if assigned_to_user:
+        # Update the task's assigned user
+        task.assigned_to = assigned_to_user
+        task.save()
         
-        # Get task object
-        task = get_object_or_404(Task, id=task_id)
-        
-        if assigned_user_id:
-            assigned_user = get_object_or_404(User, username=assigned_user_id)
-            task.assigned_user = assigned_user
-            task.save()
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse({'success': False, 'error': 'Assigned user not found'})
-
-    return JsonResponse({'success': False, 'error': 'Invalid request'})
+        messages.success(request, f"Task assigned to {assigned_to_user.username} successfully.")
+    else:
+        messages.error(request, "Invalid user selected.")
+    
+    # Redirect back to the task list view
+    return redirect('view_task_list')
 
 @login_required
 @admin_required

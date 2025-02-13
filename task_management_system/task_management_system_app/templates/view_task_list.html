@@ -201,13 +201,16 @@
                                 <td><input type="checkbox" name="tasks_to_delete" value="{{ task.id }}" class="task-checkbox"></td>
                                 <td>{{ task.task_name }}</td>
                                 <td>
-                                    <select name="assigned_to_{{ task.id }}" class="form-control assigned-user-dropdown">
-                                        {% for user in users_list %}
-                                            <option value="{{ user.username }}" {% if task.assigned_to.username == user.username %}selected{% endif %}>
-                                                {{ user.username }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
+                                    <form method="POST" action="{% url 'change_assigned_user' task.id %}" class="assigned-user-form">
+                                        {% csrf_token %}
+                                        <select name="assigned_to" class="form-control assigned-user-dropdown" onchange="this.form.submit()">
+                                            {% for user in users_list %}
+                                                <option value="{{ user.username }}" {% if task.assigned_to.username == user.username %}selected{% endif %}>
+                                                    {{ user.username }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </form>
                                 </td>
                                 <td>{{ task.start_date }}</td>
                                 <td>{{ task.end_date }}</td>
