@@ -30,17 +30,14 @@ import openpyxl
 import pandas as pd
 
 
-
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def is_admin(user):
     return user.is_superuser
 
-
 admin_required = user_passes_test(lambda user: user.is_superuser)
 
-# @login_required
+#@login_required
 def user_login(request):
     if request.method == 'POST':
         form = LoginForm(request, request.POST)
@@ -173,7 +170,6 @@ def home(request):
             'selected_users': selected_users,  # Pass selected users here for the admin view
         })
         
-        
 # Add a view for downloading tasks in Excel format
 @login_required
 def download_tasks(request):
@@ -231,10 +227,6 @@ def register(request):
         form = RegistrationForm()
     return render(request, 'task_management_system_app/register.html', {'form': form})
 
-
-# def user_profile(request):
-#     return render(request, 'profile.html')
-
 def LogoutPage(request):
     logout(request)
     # if not request.session.get('has_logged_in', False):  # Check if the user has logged in before
@@ -242,15 +234,6 @@ def LogoutPage(request):
     #         request.session['has_logged_in'] = True  # Set flag to True
     messages.success(request, "Logout Successfully!")
     return redirect("login")
-
-
-@login_required
-@admin_required
-def delete_task(request, task_id):
-    if request.method == 'POST':
-        task = Task.objects.get(id=task_id)
-        task.delete()
-    return redirect(reverse('category_list'))
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -378,33 +361,6 @@ def create_daily_task(request):
     return assign_tasks(request, tasks, users_list, 'create_daily_task', is_daily_task=True)
 
 @login_required
-def update_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id)  # Get the task by its ID
-    users = User.objects.all()
-    if request.method == 'POST':
-        form = TaskForm(request.POST)  # Pre-populate the form with the existing task data
-        if form.is_valid():
-                # Get the user by username from the form data
-                assigned_user = User.objects.get(username=form.cleaned_data['assigned_to'])
-
-                # Create and save the task in the database
-                task = form.save(commit=False)  # Create the task but don't save it yet
-                task.assigned_to = assigned_user  # Set assigned user manually
-                task.save()  # Now save the task
-
-                # Show success message and redirect to the home page
-                messages.success(request, 'Task has been successfully created!')
-                return redirect('view_task_list')# Redirect back to the home page or a list of tasks
-        else:
-            # If the form is not valid, print the errors for debugging
-            messages.error(request, 'Form submission error. Please check the input data.')
-    else:
-        form = TaskForm()  # Initialize the form with the existing task data
-    
-    return render(request, 'task_management_system_app/update_task.html', {'form': form, 'task': task, 'user': users})
-
-
-@login_required
 @admin_required
 def delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)  # Get the task by ID
@@ -500,10 +456,10 @@ def view_task_list(request):
     if selected_users_usernames:
         users = User.objects.filter(username__in=selected_users_usernames)
     else:
-        users = User.objects.all()
+        users = User.objects.filter(is_superuser=False)  # Exclude admin users
     
     users_list = list(users)
-
+    
     # Admins can see all tasks, regular users can see their own tasks
     if request.user.is_superuser:
         # Admin can see all tasks and filter by dates
@@ -556,8 +512,6 @@ def view_task_list(request):
         'users_list': users_list,  # Pass the list of users to the template for dropdown
     })
 
-
-
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
 def change_assigned_user(request, task_id):
     # Get the task based on task_id
@@ -581,25 +535,6 @@ def change_assigned_user(request, task_id):
     # Redirect back to the task list view
     return redirect('view_task_list')
 
-@login_required
-@admin_required
-def category_list(request):
-    categories = Category.objects.all()
-    return render(request, 'task_management_system_app/category_list.html', {'categories': categories})
-
-
-@login_required
-@admin_required
-def create_category(request):
-    if request.method == 'POST':
-        form = CategoryForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('category_list')  # Replace with your desired redirect
-    else:
-        form = CategoryForm()
-    return render(request, 'create_category.html', {'form': form})
-
 def forgot_password(request):
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
@@ -622,64 +557,3 @@ def forgot_password(request):
     context = {"form": form}
     return render(request, "task_management_system_app/forgot_password.html", context)
 
-def create_category_view(request):
-    if request.method == 'POST':
-        form = CategoryForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('home')  # Redirect to a success page or another view
-    else:
-        form = CategoryForm()
-    return render(request, 'create_category.html', {'form': form})
-
-@login_required
-@admin_required
-def delete_category(request, category_id):
-    category = Category.objects.get(pk=category_id)
-    if category.task_set.exists():
-        messages.error(
-            request, "You cannot delete this category as it contains tasks.")
-    else:
-        category.delete()
-        messages.success(request, "Category deleted successfully.")
-    return redirect('category_list')
-
-
-@login_required
-@admin_required
-def category_tasks(request, category_id):
-    category = get_object_or_404(Category, pk=category_id)
-    tasks = category.task_set.all()
-    return render(request, 'task_management_system_app/category_tasks.html', {'category': category, 'tasks': tasks})
-
-
-# @login_required
-# @admin_required
-def task_chart(request):
-    categories = Category.objects.all()
-    users = User.objects.all()
-
-    # Count pending tasks by category
-    pending_counts_by_category = {}
-    for category in categories:
-        pending_counts_by_category[category.name] = Task.objects.filter(
-            category=category,
-            start_date__gt=timezone.now()  # Pending tasks (not started yet)
-        ).count()
-
-    # Count pending tasks by user
-    pending_counts_by_user = {}
-    for user in users:
-        pending_counts_by_user[user.username] = Task.objects.filter(
-            assigned_to=user,
-            start_date__gt=timezone.now()  # Pending tasks (not started yet)
-        ).count()
-
-    return render(
-        request,
-        'task_management_system_app/task_chart.html',
-        {
-            'pending_counts_by_category': pending_counts_by_category,
-            'pending_counts_by_user': pending_counts_by_user,
-        }
-    )

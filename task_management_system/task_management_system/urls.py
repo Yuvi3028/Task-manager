@@ -30,31 +30,22 @@ def redirect_to_login(request):
 urlpatterns = [
     path('', redirect_to_login),
     path('admin/', admin.site.urls),
-    path('user/', views.user_tasks_list, name='user_tasks_list'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('register/', views.register, name='register'),
     path('home/', views.home, name='home'),
     path('download_tasks/', views.download_tasks, name='download_tasks'),
     path('login/', views.user_login, name='login'),
     path("logout/", views.LogoutPage, name="logout"),
-    # path('', views.category_list, name='category_list'),
-    # path('categories/create/', views.create_category, name='create_category'),
-    # path('categories/<int:category_id>/', views.category_tasks, name='category_tasks'),
-    # path('categories/delete/<int:category_id>/', views.delete_category, name='delete_category'),
     path('tasks/create/', views.create_task, name='create_task'),
     path('create_daily/', views.create_daily_task, name='create_daily_task'),
-    path('tasks/update/<int:task_id>/', views.update_task, name='update_task'),
     path('tasks/delete/<int:task_id>/', views.delete_task, name='delete_task'),
-    path('task/<int:task_id>/edit/', views.update_task, name='update_task'),
     path('task/<int:task_id>/delete/', views.delete_task, name='delete_task'),
     path('delete-task/<int:task_id>/', views.delete_task, name='delete_task'),
     path('delete-selected-tasks/', views.delete_selected_tasks, name='delete_selected_tasks'),
-    # path('update-assigned-user/', views.update_assigned_user, name='update_assigned_user'),
     path('task/<int:task_id>/change-assigned-user/', views.change_assigned_user, name='change_assigned_user'),
     path('task-list/', views.view_task_list, name='view_task_list'),
-    path('task-chart/', views.task_chart, name='task_chart'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
-    # path('profile/', views.user_profile, name='profile'),
+    
    
 ]
 
