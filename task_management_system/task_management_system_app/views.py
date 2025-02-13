@@ -25,6 +25,7 @@ from .forms import TaskForm
 import json
 import random
 import os
+import re
 import openpyxl
 import pandas as pd
 
@@ -162,7 +163,7 @@ def home(request):
         else:
             # Default to today's tasks if no date range is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
-
+        tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
         # Render the template with tasks assigned to the logged-in user and filter parameters
         return render(request, 'home.html', {
             'tasks': tasks,
@@ -454,6 +455,30 @@ def delete_selected_tasks(request):
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+from datetime import datetime
+
+# Function to extract time from task name (like '5:30 PM EST' from the task names)
+from datetime import datetime
+
+# Function to extract time from task name (like '4:30 PM' from the task names)
+def extract_time_from_task_name(task_name):
+    try:
+        # Find the last occurrence of a time in the format of 'HH:MM AM/PM'
+        parts = task_name.split(' ')
+        
+        # Check if the last three parts contain the time (e.g., '4:30 PM')
+        time_str = None
+        if len(parts) >= 4:
+            time_str = parts[-4] + ' ' + parts[-3]  # This gives us the time part (e.g., '4:30 PM')
+        
+        # If the time_str is found, convert it to a datetime object
+        if time_str:
+            return datetime.strptime(time_str, '%I:%M %p')  # Convert to datetime object
+
+        return None  # If time extraction fails, return None
+    except Exception as e:
+        # print(f"Error extracting time from task name: {task_name}, error: {e}")
+        return None  # Return None if there is an error
 
 @login_required
 @admin_required
@@ -520,6 +545,9 @@ def view_task_list(request):
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
+    # Sort tasks by time extracted from the task name
+    tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
+    
     # Pass the full list of users and filtered tasks to the template
     return render(request, 'view_task_list.html', {
         'tasks': tasks,
@@ -527,6 +555,8 @@ def view_task_list(request):
         'to_date': to_date,
         'users_list': users_list,  # Pass the list of users to the template for dropdown
     })
+
+
 
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
 def change_assigned_user(request, task_id):
