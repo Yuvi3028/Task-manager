@@ -14,6 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.timezone import is_aware, make_naive
+from django.views.decorators.csrf import csrf_exempt
 from dateutil import parser
 import datetime
 from datetime import datetime
@@ -467,8 +468,20 @@ def view_task_list(request):
     # Filter tasks for the logged-in user (for regular users)
     tasks = Task.objects.all()
 
+    # Get selected users from the session (store the selected users in session in the home view)
+    selected_users_usernames = request.session.get('selected_users', [])
+    
+    # Get the list of users based on session or return all users
+    if selected_users_usernames:
+        users = User.objects.filter(username__in=selected_users_usernames)
+    else:
+        users = User.objects.all()
+    
+    users_list = list(users)
+
+    # Admins can see all tasks, regular users can see their own tasks
     if request.user.is_superuser:
-        # Admins can see all tasks
+        # Admin can see all tasks and filter by dates
         if from_date:
             try:
                 from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
@@ -487,7 +500,7 @@ def view_task_list(request):
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
     else:
-        # Regular users can see their own tasks only
+        # Regular users can see only their own tasks
         tasks = tasks.filter(assigned_to=request.user)
 
         if from_date:
@@ -507,8 +520,33 @@ def view_task_list(request):
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
-    return render(request, 'view_task_list.html', {'tasks': tasks, 'from_date': from_date, 'to_date': to_date})
+    # Pass the full list of users and filtered tasks to the template
+    return render(request, 'view_task_list.html', {
+        'tasks': tasks,
+        'from_date': from_date,
+        'to_date': to_date,
+        'users_list': users_list,  # Pass the list of users to the template for dropdown
+    })
 
+# @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
+def update_assigned_user(request):
+    if request.method == 'POST' and request.is_ajax():
+        data = json.loads(request.body)
+        task_id = data.get('task_id')
+        assigned_user_id = data.get('assigned_user_id')
+        
+        # Get task object
+        task = get_object_or_404(Task, id=task_id)
+        
+        if assigned_user_id:
+            assigned_user = get_object_or_404(User, username=assigned_user_id)
+            task.assigned_user = assigned_user
+            task.save()
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Assigned user not found'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 @admin_required

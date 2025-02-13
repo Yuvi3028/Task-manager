@@ -200,7 +200,15 @@
                             <tr>
                                 <td><input type="checkbox" name="tasks_to_delete" value="{{ task.id }}" class="task-checkbox"></td>
                                 <td>{{ task.task_name }}</td>
-                                <td>{{ task.assigned_to }}</td>
+                                <td>
+                                    <select name="assigned_to_{{ task.id }}" class="form-control assigned-user-dropdown">
+                                        {% for user in users_list %}
+                                            <option value="{{ user.username }}" {% if task.assigned_to.username == user.username %}selected{% endif %}>
+                                                {{ user.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
                                 <td>{{ task.start_date }}</td>
                                 <td>{{ task.end_date }}</td>
                             </tr>
