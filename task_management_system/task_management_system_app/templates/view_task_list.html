@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,7 +15,7 @@
             left: -250px;
             height: 100%;
             width: 250px;
-            background-color: #90ee90;
+            background-color: rgb(247, 247, 247);
             padding-top: 20px;
             display: block;
             z-index: 1000;
@@ -113,7 +114,7 @@
             color: white;
             padding: 10px;
             border-radius: 3px;
-            display: none; /* Initially hidden */
+            display: none;
             z-index: 9999;
             font-size: 16px;
         }
@@ -122,34 +123,44 @@
         .modal-backdrop {
             display: none;
         }
+
         .modal-show {
             display: block !important;
         }
     </style>
 </head>
-<body>
 
+<body>
     <!-- Display success message -->
     {% if messages %}
     <div class="popup-message" id="popupMessage">
         {% for message in messages %}
-            <p>{{ message }}</p>
+        <p>{{ message }}</p>
         {% endfor %}
     </div>
     {% endif %}
 
     <div class="user-info">
-        <span>Welcome, {{ user.username }}</span> |
-        <a href="{% url 'logout' %}">Logout</a>
+        <!-- Dropdown for user info and logout -->
+        <div class="dropdown">
+            <!-- The span now acts as the dropdown trigger -->
+            <span class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Welcome, {{ user.username }}
+            </span>
+            <!-- Dropdown menu with logout option -->
+            <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+            </ul>
+        </div>
     </div>
 
     <span class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</span>
 
     <div class="sidebar" id="sidebarMenu" style="left: 0;">
         <h3 class="text-center mb-4">Admin Menu</h3>
-        <a href="{% url 'create_task' %}" class="btn btn-primary btn-block mb-2">Create Hourly Task</a>
-        <a href="{% url 'create_daily_task' %}" class="btn btn-primary btn-block mb-2">Create Daily Task</a>
-        <a href="{% url 'view_task_list' %}" class="btn btn-primary btn-block mb-2">View Task List</a>
+        <a href="{% url 'create_task' %}" class="custom-link mb-2">Create Hourly Task</a>
+        <a href="{% url 'create_daily_task' %}" class="custom-link mb-2">Create Daily Task</a>
+        <a href="{% url 'view_task_list' %}" class="custom-link mb-2">View Task List</a>
     </div>
 
     <div class="content" id="mainContent">
@@ -178,17 +189,16 @@
         <div class="container mt-4">
             <h3 class="text-center">Task List</h3>
 
-            <form method="POST" action="{% url 'delete_selected_tasks' %}">
+            <form method="POST" action="{% url 'delete_selected_tasks' %}" id="delete-form">
                 {% csrf_token %}
                 <div class="d-flex justify-content-between mb-3">
-                    <button type="submit" class="btn btn-danger">Delete Selected Tasks</button>
-                    {% comment %} <input type="checkbox" id="select-all"> Select All {% endcomment %}
+                    <button type="submit" class="btn btn-danger" id="delete-btn" disabled>Delete Selected Tasks</button>
                 </div>
-
+            
                 <table class="table table-bordered table-striped">
                     <thead>
                         <tr>
-                            <th><input type="checkbox" id="select-all" class="select-checkbox"> Select</th> <!-- Updated id for easier targeting -->
+                            <th><input type="checkbox" id="select-all" class="select-checkbox"> Select</th>
                             <th>Task Name</th>
                             <th>Assigned User</th>
                             <th>Start Date</th>
@@ -197,28 +207,37 @@
                     </thead>
                     <tbody>
                         {% for task in tasks %}
-                            <tr>
-                                <td><input type="checkbox" name="tasks_to_delete" value="{{ task.id }}" class="task-checkbox"></td>
-                                <td>{{ task.task_name }}</td>
-                                <td>
-                                    <form method="POST" action="{% url 'change_assigned_user' task.id %}" class="assigned-user-form">
-                                        {% csrf_token %}
-                                        <select name="assigned_to" class="form-control assigned-user-dropdown" onchange="this.form.submit()">
-                                            {% for user in users_list %}
-                                                <option value="{{ user.username }}" {% if task.assigned_to.username == user.username %}selected{% endif %}>
-                                                    {{ user.username }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                    </form>
-                                </td>
-                                <td>{{ task.start_date }}</td>
-                                <td>{{ task.end_date }}</td>
-                            </tr>
+                        <tr>
+                            <td>
+                                <form method="POST" action="{% url 'delete_selected_tasks' %}" id="delete-form">
+                                    {% csrf_token %}
+                                </form>
+                                <input type="checkbox" name="tasks_to_delete" value="{{ task.id }}" class="task-checkbox">
+                            </td>
+                            
+                            <td>{{ task.task_name }}</td>
+                            
+                            <td>
+                                <!-- Form for changing the assigned user -->
+                                <form method="POST" action="{% url 'change_assigned_user' task.id %}" class="assigned-user-form">
+                                    {% csrf_token %}
+                                    <select name="assigned_to" class="form-control assigned-user-dropdown" onchange="this.form.submit()">
+                                        {% for user in users_list %}
+                                            <option value="{{ user.username }}" {% if task.assigned_to.username == user.username %}selected{% endif %}>
+                                                {{ user.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            
+                            <td>{{ task.start_date }}</td>
+                            <td>{{ task.end_date }}</td>
+                        </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="5">No tasks found for the selected date range.</td>
-                            </tr>
+                        <tr>
+                            <td colspan="5">No tasks found for the selected date range.</td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -234,7 +253,7 @@
         </div>
     </div>
 
-    <!-- Delete confirmation modal -->
+    {% comment %} <!-- Delete confirmation modal -->
     <div class="modal modal-backdrop" id="deleteModal">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -255,7 +274,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> {% endcomment %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -273,7 +292,7 @@
                 mainContent.style.marginLeft = '0';
             }
         }
-    
+
         // Select/Deselect all checkboxes (top checkbox selects all task checkboxes)
         document.getElementById('select-all').addEventListener('change', function() {
             var checkboxes = document.querySelectorAll('.task-checkbox');
@@ -281,23 +300,27 @@
             checkboxes.forEach(function(checkbox) {
                 checkbox.checked = isChecked; // Set the state of each task checkbox to match the top checkbox
             });
+
+            // Enable/Disable delete button based on the selected checkboxes
+            var deleteBtn = document.getElementById('delete-btn');
+            deleteBtn.disabled = !isChecked; // Disable if 'Select All' is unchecked
         });
-    
-        // Function to confirm deletion
+
+        {% comment %} // Function to confirm deletion with modal
         function confirmDelete(taskId, taskName) {
             document.getElementById('taskName').innerText = taskName;
             var deleteForm = document.getElementById('deleteForm');
             deleteForm.action = "/task/" + taskId + "/delete/";  // Correct URL format for task deletion
             var modal = document.getElementById('deleteModal');
-            modal.classList.add('modal-show');
+            modal.classList.add('modal-show'); // Show the modal
         }
-    
-        // Close the modal
+
+        // Close the modal function
         function closeModal() {
             var modal = document.getElementById('deleteModal');
-            modal.classList.remove('modal-show');
-        }
-    
+            modal.classList.remove('modal-show'); // Hide the modal
+        } {% endcomment %}
+
         // Show success toast if there's a success message
         window.onload = function() {
             const popup = document.getElementById("popupMessage");
@@ -308,6 +331,32 @@
                 }, 1000); // Hide after 1 second
             }
         };
+
+        // Ensure the 'Delete Selected Tasks' button is properly enabled/disabled
+        document.addEventListener('DOMContentLoaded', function () {
+            const deleteBtn = document.getElementById('delete-btn');
+            const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+            
+            // Initially disable delete button if no tasks are selected
+            const isChecked = document.querySelectorAll('.task-checkbox:checked').length > 0;
+            deleteBtn.disabled = !isChecked;
+        
+            // Add event listeners to task checkboxes for enabling/disabling the delete button
+            taskCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    const selectedTasks = document.querySelectorAll('.task-checkbox:checked').length;
+                    deleteBtn.disabled = selectedTasks === 0; // Disable if no tasks are selected
+                });
+            });
+        });
+
+        // Prevent the default action when "assigned user" form is submitted
+        document.querySelectorAll('.assigned-user-form').forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+                this.submit(); // Explicitly submit the form for changing assigned user
+            });
+        });
     </script>
 </body>
 </html>

@@ -5,20 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        padding: 40px;
+      }
+
+      .container {
+        max-width: 500px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      label {
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="email"] {
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      button {
+        padding: 12px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      p {
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
+
     <div class="container">
-      <div class="row">
-        <div class="col-md-6 offset-md-3">
-          <h2 class="mt-4 mb-4">Register</h2>
-          <form method="post" class="mb-4">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Register</button>
-          </form>
-          <p>Already have an account? <a href="{% url 'login' %}" class="btn btn-link">Login here</a>.</p>
-        </div>
-      </div>
+      <h2>Register</h2>
+      <form method="post" class="mb-4">
+        {% csrf_token %}
+        {{ form.as_p }} <!-- Render the form fields here -->
+        <button type="submit" class="btn btn-primary btn-block">Register</button>
+      </form>
+      <p>Already have an account? <a href="{% url 'login' %}" class="btn btn-link">Login here</a>.</p>
     </div>
+
   </body>
 </html>

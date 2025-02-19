@@ -131,6 +131,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# For development, ensure this points to your static directory
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # If you have a "static" folder in your project
+]
+
 # For development, you may also include this if you want to serve static files from a custom directory
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 

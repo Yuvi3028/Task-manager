@@ -15,7 +15,7 @@
                 left: -250px;  /* Initially off-screen */
                 height: 100%;
                 width: 250px;
-                background-color: #90ee90;
+                background-color:rgb(247, 247, 247);
                 padding-top: 20px;
                 display: block;
                 z-index: 1000;
@@ -37,7 +37,7 @@
             }
 
             .sidebar a:hover {
-                background-color: rgb(99, 87, 95);
+                background-color: rgb(207, 186, 174);
             }
 
             .content {
@@ -71,17 +71,16 @@
             .user-info {
                 position: fixed;
                 top: 20px;
-                right: 20px; /* Align to the right corner */
-                z-index: 1100;
+                right: 20px;
+                z-index: 3;
                 font-size: 16px;
                 background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
                 padding: 5px 10px;
                 border-radius: 5px;
             }
 
-            .user-info a {
-                margin-left: 5px;
-                text-decoration: none;
+            .dropdown-menu {
+                min-width: 150px; /* Adjust width of the dropdown */
             }
 
             /* Popup message style */
@@ -127,10 +126,18 @@
     </head>
     <body>
 
-        <!-- User Info in the top right corner -->
         <div class="user-info">
-            <span>Welcome, {{ user.username }}</span> |
-            <a href="{% url 'logout' %}">Logout</a>
+            <!-- Dropdown for user info and logout -->
+            <div class="dropdown">
+                <!-- The span now acts as the dropdown trigger -->
+                <span class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Welcome, {{ user.username }}
+                </span>
+                <!-- Dropdown menu with logout option -->
+                <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                </ul>
+            </div>
         </div>
 
         {% if user.is_superuser %}
@@ -140,16 +147,16 @@
             <!-- Sidebar for Admin Users -->
             <div class="sidebar" id="sidebarMenu" style="left: 0;">
                 <h3 class="text-center mb-4">Admin Menu</h3>
-                <a href="{% url 'create_task' %}" class="btn btn-primary btn-block mb-2">Create Hourly Task</a>
-                <a href="{% url 'create_daily_task' %}" class="btn btn-primary btn-block mb-2">Create Daily Task</a>
-                <a href="{% url 'view_task_list' %}" class="btn btn-primary btn-block mb-2">View Task List</a>
+                <a href="{% url 'create_task' %}" class="custom-link mb-2">Create Hourly Task</a>
+                <a href="{% url 'create_daily_task' %}" class="custom-link mb-2">Create Daily Task</a>
+                <a href="{% url 'view_task_list' %}" class="custom-link mb-2">View Task List</a>
             </div>
         {% endif %}
 
         <!-- Main Content -->
         <div class="content" id="mainContent">
-            <h1>MIS Employees Task Assigning Manager</h1>
-            <p class="text-center">Welcome to the Task Management System</p>
+            <h1>Task Assigning Manager App For MIS Employees</h1>
+            {% comment %} <p class="text-center">Welcome to the Task Assigning Management System</p> {% endcomment %}
 
             <!-- Date Range Filter Form -->
             <form method="get" action="{% url 'home' %}" class="form-inline">
@@ -300,6 +307,7 @@
                                 <th>Task Name</th>
                                 <th>Start Date</th>
                                 <th>End Date</th>
+                                <th>Target Time</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -308,6 +316,7 @@
                                     <td>{{ task.task_name }}</td>
                                     <td>{{ task.start_date }}</td>
                                     <td>{{ task.end_date }}</td>
+                                    <td>{{ task.target_time }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>

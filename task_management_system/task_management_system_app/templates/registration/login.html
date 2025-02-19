@@ -18,6 +18,58 @@
         z-index: 9999;
         display: none;  /* Initially hidden */
       }
+
+      /* Style for the left half (Task Assigning App) */
+      .left-half {
+        background-color: #003366;  /* Dark blue color */
+        color: white;
+        display: flex;
+        flex-direction: column; /* Stack elements vertically */
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        text-align: center;
+        padding-left: 20px;
+      }
+
+      /* Left logo position */
+      .left-half img {
+        margin-top: 20px;  /* Give space between the text and the logo */
+        height: 300px;  /* Adjust logo size */
+        width: auto;  /* Maintain aspect ratio */
+      }
+
+      /* Increase font size for Task Assigning App */
+      .left-half div {
+        font-size: 3rem;  /* Adjust the font size here */
+        font-weight: bold;
+      }
+
+      /* Style for the right half (Login Form) */
+      .right-half {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        position: relative;
+      }
+
+      /* Right logo position */
+      .right-half img {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        height: 50px; /* Adjust logo size */
+      }
+
+      .login-container {
+        width: 100%;
+        max-width: 400px;  /* Limiting the login form width */
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
     </style>
   </head>
   <body>
@@ -27,22 +79,35 @@
       Logout Successfully!
     </div>
 
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6 offset-md-3">
-          <h2 class="mt-4 mb-4">Login</h2>
+    {% load static %}
+    
+    <!-- Main Layout -->
+    <div class="row no-gutters">
+      <!-- Left Half with Task Assigning App -->
+      <div class="col-md-6 left-half">
+        <div>
+          Task Assigning App
+        </div>
+        <img src="{% static 'task_logo.png' %}" alt="Left Logo">  <!-- Left Logo -->
+      </div>
+
+      <!-- Right Half with Login Form -->
+      <div class="col-md-6 right-half">
+        <img src="{% static 'kgis_logo.png' %}" alt="Right Logo">  <!-- Right Logo -->
+        <div class="login-container">
+          <h2 class="mb-4 text-center">Login</h2>
 
           <!-- Login Form -->
           <form method="post" class="mb-4">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
           </form>
 
-          <p>
+          <p class="text-center">
             Forgot your password? <a href="{% url 'forgot_password' %}" class="btn btn-link">Reset Password</a>
           </p>
-          <p>
+          <p class="text-center">
             Don't have an account? <a href="{% url 'register' %}" class="btn btn-link">Register here</a>
           </p>
         </div>
