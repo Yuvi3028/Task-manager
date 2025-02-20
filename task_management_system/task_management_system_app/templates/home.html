@@ -1,371 +1,376 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Home Page</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Adding Chart.js -->
-        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> <!-- Adding Chart.js DataLabels plugin -->
-        <style>
-            /* Custom styles for the sidebar */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Adding Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> <!-- Adding Chart.js DataLabels plugin -->
+    <style>
+        /* Header styling */
+        .header {
+            background-color: #001f3f; /* Dark blue */
+            color: white;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 4px solid #001a35; /* Darker blue border */
+            font-size: 1.5rem;
+            font-weight: bold;
+            position: relative; /* Ensures it stays in normal flow */
+            z-index: 1100; /* Make sure header stays above sidebar */
+            display: flex;
+            justify-content: space-between; /* This will place the hamburger icon on the right side */
+            align-items: center;
+        }
+
+        /* Sidebar toggle button container below the header */
+        .sidebar-toggle-container {
+            position: relative;  /* Positioned absolutely below the header */
+            top: 15px;  /* Adjusted to be a little below the header */
+            left: 15px; /* Place the button towards the right */
+            z-index: 1200; /* Ensure it is above other elements like the sidebar */
+        }
+
+        /* Sidebar toggle button styling */
+        .sidebar-toggle {
+            font-size: 30px; /* Adjust size of the icon */
+            cursor: pointer;
+            color: Black; /* Color of the hamburger icon */
+        }
+
+        /* Custom styles for the sidebar */
+        .sidebar {
+            position: absolute;  /* Changed from fixed to absolute */
+            top: 60px;  /* Adjusted top to account for the header height */
+            left: -250px;  /* Initially off-screen */
+            height: calc(100% - 60px);  /* Subtract header height from full height */
+            width: 250px;
+            background-color: rgb(247, 247, 247);
+            padding-top: 20px;
+            display: block;
+            z-index: 1000;
+            transition: left 0.3s ease;  /* Smooth transition */
+        }
+
+        .sidebar a {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar h3 {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background-color: rgb(207, 186, 174);
+        }
+
+        /* Sidebar content area */
+        .content {
+            margin-left: 250px;  /* Add some left margin to push content when sidebar is visible */
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        /* User Info Styling */
+        .user-info {
+            position: absolute; /* Position it relative to the header */
+            top: 50%; /* Vertically center it in the header */
+            right: 20px; /* Adjust the position towards the right edge */
+            transform: translateY(-50%); /* Vertically center exactly */
+            z-index: 1200; /* Ensure it's above other elements like the sidebar */
+        }
+
+        .user-info .dropdown-toggle {
+            color: white;  /* Set text color to white */
+            cursor: pointer;  /* Change cursor to pointer for interactivity */
+            font-size: 1rem;  /* Adjust font size */
+            font-weight: bold;  /* Make text bold for better visibility */
+        }
+        /* Popup Message Styling */
+        .popup-message {
+            position: absolute;
+            top: 80px; /* Position it just below the header */
+            right: 20px; /* Position it in the right side corner */
+            background-color: #28a745; /* Green background for the popup */
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1300; /* Ensure it appears above other elements */
+            display: none; /* Initially hidden */
+        }
+
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+            }
+
             .sidebar {
                 position: fixed;
+                left: 0;
                 top: 0;
-                left: -250px;  /* Initially off-screen */
-                height: 100%;
-                width: 250px;
-                background-color:rgb(247, 247, 247);
-                padding-top: 20px;
-                display: block;
-                z-index: 1000;
-                transition: left 0.3s ease;  /* Smooth transition */
+                bottom: 0;
+                width: 100%;
+                height: auto;
+                z-index: 1001;
             }
 
             .sidebar a {
-                color: Black;
-                padding: 10px 15px;
-                text-decoration: none;
-                display: block;
+                padding: 15px 30px;
             }
 
-            .sidebar h3 {
-                color: Black;
-                padding: 10px 15px;
-                text-decoration: none;
-                display: block;
-            }
-
-            .sidebar a:hover {
-                background-color: rgb(207, 186, 174);
-            }
-
-            .content {
-                margin-left: 250px;  /* Add some left margin to push content when sidebar is visible */
-                padding: 20px;
-                transition: margin-left 0.3s ease;
-            }
-
-            /* Custom styles for the heading */
-            .content h1 {
-                text-align: center;
-            }
-
-            /* Custom styles for the buttons */
-            .btn-block {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-
-            /* Button for the sidebar toggle */
             .sidebar-toggle {
-                font-size: 1.5rem;
-                cursor: pointer;
-                position: fixed;
-                left: 10px;
                 top: 10px;
-                z-index: 1100;
+                left: 10px;
             }
+        }
+    </style>
+</head>
+<body>
 
-            /* Positioning the user info section at the top right corner */
-            .user-info {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 3;
-                font-size: 16px;
-                background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
-                padding: 5px 10px;
-                border-radius: 5px;
-            }
-
-            .dropdown-menu {
-                min-width: 150px; /* Adjust width of the dropdown */
-            }
-
-            /* Popup message style */
-            .popup-message {
-                position: fixed;
-                top: 20px;
-                right: 10px;
-                background-color: #28a745;
-                color: white;
-                padding: 10px;
-                border-radius: 3px;
-                display: none; /* Initially hidden */
-                z-index: 9999;
-                font-size: 16px;
-            }
-
-            /* Responsive styling */
-            @media (max-width: 768px) {
-                .content {
-                    margin-left: 0;
-                }
-
-                .sidebar {
-                    position: fixed;
-                    left: 0;
-                    top: 0;
-                    bottom: 0;
-                    width: 100%;
-                    height: auto;
-                    z-index: 1001;
-                }
-
-                .sidebar a {
-                    padding: 15px 30px;
-                }
-
-                .sidebar-toggle {
-                    top: 10px;
-                    left: 10px;
-                }
-            }
-        </style>
-    </head>
-    <body>
-
+    <!-- Header -->
+    <div class="header">
+        Task Assigning Manager
+        <!-- User Info Dropdown -->
         <div class="user-info">
-            <!-- Dropdown for user info and logout -->
             <div class="dropdown">
-                <!-- The span now acts as the dropdown trigger -->
                 <span class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     Welcome, {{ user.username }}
                 </span>
-                <!-- Dropdown menu with logout option -->
                 <ul class="dropdown-menu" aria-labelledby="userDropdown">
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
             </div>
         </div>
+    </div>
 
-        {% if user.is_superuser %}
-            <!-- Hamburger menu for Admin Users -->
-            <span class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</span>
+    
 
-            <!-- Sidebar for Admin Users -->
-            <div class="sidebar" id="sidebarMenu" style="left: 0;">
-                <h3 class="text-center mb-4">Admin Menu</h3>
-                <a href="{% url 'create_task' %}" class="custom-link mb-2">Create Hourly Task</a>
-                <a href="{% url 'create_daily_task' %}" class="custom-link mb-2">Create Daily Task</a>
-                <a href="{% url 'view_task_list' %}" class="custom-link mb-2">View Task List</a>
+    {% if user.is_superuser %}
+        <!-- Sidebar for Admin Users -->
+        <div class="sidebar" id="sidebarMenu" style="left: 0;">
+            <h3 class="text-center mb-4">Admin Menu</h3>
+            <a href="{% url 'create_task' %}" class="custom-link mb-2">Create Hourly Task</a>
+            <a href="{% url 'create_daily_task' %}" class="custom-link mb-2">Create Daily Task</a>
+            <a href="{% url 'view_task_list' %}" class="custom-link mb-2">View Task List</a>
+        </div>
+    {% endif %}
+
+    {% if user.is_superuser %}
+    <div class="sidebar-toggle-container">
+        <span class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</span>
+    </div>
+    {% endif %}
+
+
+    <!-- Main Content -->
+    <div class="content" id="mainContent">
+        
+        <!-- Date Range Filter Form -->
+        <form method="get" action="{% url 'home' %}" class="form-inline">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="from_date">From Date:</label>
+                    <input type="date" id="from_date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="to_date">To Date:</label>
+                    <input type="date" id="to_date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary mt-4">Go</button>
+                </div>
+            </div>
+        </form>
+
+        {% if messages %}
+            <div class="popup-message" id="popupMessage">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
             </div>
         {% endif %}
 
-        <!-- Main Content -->
-        <div class="content" id="mainContent">
-            <h1>Task Assigning Manager App For MIS Employees</h1>
-            {% comment %} <p class="text-center">Welcome to the Task Assigning Management System</p> {% endcomment %}
-
-            <!-- Date Range Filter Form -->
-            <form method="get" action="{% url 'home' %}" class="form-inline">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label for="from_date">From Date:</label>
-                        <input type="date" id="from_date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="form-control">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="to_date">To Date:</label>
-                        <input type="date" id="to_date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="form-control">
-                    </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary mt-4">Go</button>
-                    </div>
-                </div>
-            </form>
-
-            {% if messages %}
-                <div class="popup-message" id="popupMessage">
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
+        {% if user.is_superuser %}
+            <!-- This form will only be displayed for admin users -->
+            <form method="GET" action="{% url 'home' %}">
+                <h3>Select Users for Today:</h3>
+                <div>
+                    {% for user in users %}
+                        <input type="checkbox" name="selected_users" value="{{ user.username }}" id="user_{{ user.id }}"
+                            {% if user.username in selected_users %} checked {% endif %}>
+                        <label for="user_{{ user.id }}">{{ user.username }}</label><br>
                     {% endfor %}
                 </div>
-            {% endif %}
+                <button type="submit" class="btn btn-primary">Select Users</button>
+            </form>
+        {% endif %}
 
-            {% if user.is_superuser %}
-                <!-- This form will only be displayed for admin users -->
-                <form method="GET" action="{% url 'home' %}">
-                    <h3>Select Users for Today:</h3>
-                    <div>
-                        {% for user in users %}
-                            <input type="checkbox" name="selected_users" value="{{ user.username }}" id="user_{{ user.id }}"
-                                {% if user.username in selected_users %} checked {% endif %}>
-                            <label for="user_{{ user.id }}">{{ user.username }}</label><br>
-                        {% endfor %}
-                    </div>
-                    <button type="submit" class="btn btn-primary">Select Users</button>
-                </form>
-            {% endif %}
+        {% if user.is_superuser %}
+            <!-- Admin Dashboard -->
+            <h2 class="text-center mt-5">Admin Dashboard</h2>
+            <div class="text-center mt-4">
+                <canvas id="taskDistributionChart" width="400" height="300"></canvas>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Adding Chart.js -->
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+            <script>
+                var ctx = document.getElementById('taskDistributionChart').getContext('2d');
 
-            {% comment %} <form method="GET" action="{% url 'home' %}">
-                <label>Select Users:</label><br>
-                {% for user in users %}
-                    <input type="checkbox" name="selected_users" value="{{ user.username }}" 
-                        {% if user.username in selected_users %} checked {% endif %}> {{ user.username }}<br>
-                {% endfor %}
-                <button type="submit">Select Users</button>
-            </form> {% endcomment %}
+                var colors = [
+                    'rgba(76, 180, 84, 0.7)',   // Green
+                    'rgba(54, 162, 235, 0.7)',   // Blue
+                    'rgba(255, 99, 132, 0.7)',   // Red
+                    'rgba(255, 159, 64, 0.7)',   // Orange
+                    'rgba(153, 102, 255, 0.7)',  // Purple
+                    'rgba(255, 159, 64, 0.7)',   // Yellow
+                    'rgba(255, 205, 86, 0.7)',   // Light Yellow
+                    'rgba(75, 192, 192, 0.7)',   // Teal
+                    'rgba(153, 102, 255, 0.7)',  // Light Purple
+                    'rgba(255, 99, 132, 0.7)',   // Pink
+                ];
 
-            {% if user.is_superuser %}
-                <!-- Admin Dashboard -->
-                <h2 class="text-center mt-5">Admin Dashboard</h2>
-                <div class="text-center mt-4">
-                    <canvas id="taskDistributionChart" width="400" height="300"></canvas>
-                </div>
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Adding Chart.js -->
-                <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-                <script>
-                    var ctx = document.getElementById('taskDistributionChart').getContext('2d');
+                var taskData = {
+                    labels: {{ user_names|safe }},  // User names
+                    datasets: [{
+                        label: '',
+                        data: {{ task_counts_values|safe }},  // Task counts
+                        backgroundColor: function(context) {
+                            var index = context.dataIndex;
+                            return colors[index % colors.length];  // Assign colors dynamically
+                        },
+                        borderColor: 'rgb(70, 61, 196)',  // Border color
+                        borderWidth: 1,
+                        taskNames: {{ task_names_values|safe }}  // Store task names for tooltips
+                    }]
+                };
 
-                    var colors = [
-                        'rgba(76, 180, 84, 0.7)',   // Green
-                        'rgba(54, 162, 235, 0.7)',   // Blue
-                        'rgba(255, 99, 132, 0.7)',   // Red
-                        'rgba(255, 159, 64, 0.7)',   // Orange
-                        'rgba(153, 102, 255, 0.7)',  // Purple
-                        'rgba(255, 159, 64, 0.7)',   // Yellow
-                        'rgba(255, 205, 86, 0.7)',   // Light Yellow
-                        'rgba(75, 192, 192, 0.7)',   // Teal
-                        'rgba(153, 102, 255, 0.7)',  // Light Purple
-                        'rgba(255, 99, 132, 0.7)',   // Pink
-                    ];
-
-                    var taskData = {
-                        labels: {{ user_names|safe }},  // User names
-                        datasets: [{
-                            label: '',
-                            data: {{ task_counts_values|safe }},  // Task counts
-                            backgroundColor: function(context) {
-                                var index = context.dataIndex;
-                                return colors[index % colors.length];  // Assign colors dynamically
-                            },
-                            borderColor: 'rgb(70, 61, 196)',  // Border color
-                            borderWidth: 1,
-                            taskNames: {{ task_names_values|safe }}  // Store task names for tooltips
-                        }]
-                    };
-
-                    var taskDistributionChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: taskData,
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
+                var taskDistributionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: taskData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(tooltipItem) {
+                                        return tooltipItem[0].label;  // User's name
+                                    },
+                                    label: function(tooltipItem) {
+                                        var userIndex = tooltipItem.dataIndex;
+                                        var taskCount = tooltipItem.raw;
+                                        var taskNames = taskData.datasets[0].taskNames[userIndex];  // Task names for the user
+                                        return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(' ');
+                                    }
                                 }
                             },
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        title: function(tooltipItem) {
-                                            return tooltipItem[0].label;  // User's name
-                                        },
-                                        label: function(tooltipItem) {
-                                            var userIndex = tooltipItem.dataIndex;
-                                            var taskCount = tooltipItem.raw;
-                                            var taskNames = taskData.datasets[0].taskNames[userIndex];  // Task names for the user
-                                            return 'Tasks: ' + taskCount + '\n' + 'Task Names: ' + taskNames.join(' ');
-                                        }
-                                    }
+                            legend: {
+                                display: false  // Hides the legend
+                            },
+                            // Displaying task counts above each bar
+                            datalabels: {
+                                display: true,
+                                align: 'start',  // Align label above the bar
+                                anchor: 'end',   // Position label at the end of the bar (on top)
+                                formatter: function(value) {
+                                    return value;  // Show the task count value
                                 },
-                                legend: {
-                                    display: false  // Hides the legend
+                                font: {
+                                    weight: 'bold',
+                                    size: 12
                                 },
-                                // Displaying task counts above each bar
-                                datalabels: {
-                                    display: true,
-                                    align: 'start',  // Align label above the bar
-                                    anchor: 'end',   // Position label at the end of the bar (on top)
-                                    formatter: function(value) {
-                                        return value;  // Show the task count value
-                                    },
-                                    font: {
-                                        weight: 'bold',
-                                        size: 12
-                                    },
-                                    color: '#000',  // Color of the task count text
-                                    padding: {
-                                        top: 10  // Space between the bar and label
-                                    }
+                                color: '#000',  // Color of the task count text
+                                padding: {
+                                    top: 10  // Space between the bar and label
                                 }
                             }
                         }
-                    });
-                </script> 
-            {% else %}
-                <!-- Normal User View -->
-                <h2 class="text-center mt-5">Your Daily Assigned Tasks</h2>
-                <div class="container mt-4">
-                    <h3 class="text-center">Task List</h3>
+                    }
+                });
+            </script> 
+        {% else %}
+            <!-- Normal User View -->
+            <h2 class="text-center mt-5">Your Daily Assigned Tasks</h2>
+            <div class="container mt-4">
+                <h3 class="text-center">Task List</h3>
 
-                    <table class="table table-bordered table-striped">
-                        <thead>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Task Name</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Estimated Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
                             <tr>
-                                <th>Task Name</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Target Time</th>
+                                <td>{{ task.task_name }}</td>
+                                <td>{{ task.start_date }}</td>
+                                <td>{{ task.end_date }}</td>
+                                <td>{{ task.Estimated_time }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% for task in tasks %}
-                                <tr>
-                                    <td>{{ task.task_name }}</td>
-                                    <td>{{ task.start_date }}</td>
-                                    <td>{{ task.end_date }}</td>
-                                    <td>{{ task.target_time }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4">No tasks found for the selected date range.</td>
-                                </tr>    
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">No tasks found for the selected date range.</td>
+                            </tr>    
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-                <!-- Excel Download Button for Regular User -->
-                <div class="text-center mt-4">
-                    <form method="get" action="{% url 'download_tasks' %}">
-                        <input type="hidden" name="from_date" value="{{ from_date|date:'d-m-Y' }}">
-                        <input type="hidden" name="to_date" value="{{ to_date|date:'d-m-Y' }}">
-                        <button type="submit" class="btn btn-success">Download Your Tasks as Excel</button>
-                    </form>
-                </div>
-            {% endif %}
-        </div>
+            <!-- Excel Download Button for Regular User -->
+            <div class="text-center mt-4">
+                <form method="get" action="{% url 'download_tasks' %}">
+                    <input type="hidden" name="from_date" value="{{ from_date|date:'d-m-Y' }}">
+                    <input type="hidden" name="to_date" value="{{ to_date|date:'d-m-Y' }}">
+                    <button type="submit" class="btn btn-success">Download Your Tasks as Excel</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
-        <script>
-            // Show the popup message for all users
-            window.onload = function() {
-                const popup = document.getElementById("popupMessage");
-                if (popup) {
-                    popup.style.display = "block";
-                    setTimeout(function() {
-                        popup.style.display = "none";
-                    }, 1000); // Hide after 1 second
-                }
-            };
-
-            // Function to toggle the sidebar visibility
-            function toggleSidebar() {
-                var sidebar = document.getElementById('sidebarMenu');
-                var mainContent = document.getElementById('mainContent');
-                
-                // If the sidebar is off-screen, slide it in
-                if (sidebar.style.left === '-250px' || sidebar.style.left === "") {
-                    sidebar.style.left = '0';  // Slide in the sidebar
-                    mainContent.style.marginLeft = '250px';  // Shift content to the right
-                } else {
-                    sidebar.style.left = '-250px';  // Slide out the sidebar
-                    mainContent.style.marginLeft = '0';  // Reset content margin
-                }
+    <script>
+        // Show the popup message for all users
+        window.onload = function() {
+            const popup = document.getElementById("popupMessage");
+            if (popup) {
+                popup.style.display = "block";
+                setTimeout(function() {
+                    popup.style.display = "none";
+                }, 1000); // Hide after 1 second
             }
-        </script>
-    </body>
-    </html>
+        };
+
+        // Function to toggle the sidebar visibility
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebarMenu');
+            var mainContent = document.getElementById('mainContent');
+            
+            // If the sidebar is off-screen, slide it in
+            if (sidebar.style.left === '-250px' || sidebar.style.left === "") {
+                sidebar.style.left = '0';  // Slide in the sidebar
+                mainContent.style.marginLeft = '250px';  // Shift content to the right
+            } else {
+                sidebar.style.left = '-250px';  // Slide out the sidebar
+                mainContent.style.marginLeft = '0';  // Reset content margin
+            }
+        }
+    </script>
+</body>
+</html>

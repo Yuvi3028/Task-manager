@@ -394,7 +394,7 @@ def delete_selected_tasks(request):
     if request.method == 'POST':
         # Get selected task IDs from the POST data
         task_ids = request.POST.getlist('tasks_to_delete')
-        print(f"Selected task IDs: {task_ids}")
+        
         if task_ids:
             # Try to get all tasks that match the selected IDs
             tasks = Task.objects.filter(id__in=task_ids)
@@ -510,31 +510,25 @@ def view_task_list(request):
 
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
 def change_assigned_user(request, task_id):
-    task = get_object_or_404(Task, id=task_id)  
+    # Get the task based on task_id
+    task = get_object_or_404(Task, id=task_id)
     
-    # Ensure that we get the correct data from the POST request
+    # Get the new assigned user from the form data
     assigned_to_username = request.POST.get('assigned_to')
-    if not assigned_to_username:
-        messages.error(request, "Assigned user not provided.")
-        return redirect('view_task_list')  # Redirect back if there's no assigned user in the form
     
+    # Get the user object associated with the selected username
     assigned_to_user = User.objects.filter(username=assigned_to_username).first()
     
     if assigned_to_user:
-        # Debugging: Check the task's original assigned user before updating
-        print(f"Original task assigned user: {task.assigned_to.username}")
-        
         # Update the task's assigned user
         task.assigned_to = assigned_to_user
         task.save()
-
-        # Debugging: Confirm if the task's assigned user has been updated
-        print(f"Updated task assigned user: {task.assigned_to.username}")
         
         messages.success(request, f"Task assigned to {assigned_to_user.username} successfully.")
     else:
         messages.error(request, "Invalid user selected.")
     
+    # Redirect back to the task list view
     return redirect('view_task_list')
 
 def forgot_password(request):

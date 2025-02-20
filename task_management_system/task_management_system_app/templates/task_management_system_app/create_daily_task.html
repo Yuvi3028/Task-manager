@@ -7,34 +7,52 @@
     <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
     <style>
-        .toast {    
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1050;
-            display: none;
-            padding: 15px;
-            background-color: #28a745;
+        /* Header styling */
+        .header {
+            background-color: #001f3f; /* Dark blue */
             color: white;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 4px solid #001a35; /* Darker blue border */
+            font-size: 1.5rem;
+            font-weight: bold;
+            position: relative; /* Ensures it stays in normal flow */
+            z-index: 1100; /* Make sure header stays above sidebar */
+            display: flex;
+            justify-content: space-between; /* This will place the hamburger icon on the right side */
+            align-items: center;
+        }
+        
+        .popup-message {
+            position: absolute;
+            top: 80px; /* Position it just below the header */
+            right: 20px; /* Position it in the right side corner */
+            background-color: #28a745; /* Green background for the popup */
+            color: white;
+            padding: 15px;
             border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1300; /* Ensure it appears above other elements */
+            display: none; /* Initially hidden */
         }
-
-        .toast.show {
-            display: block;
-        }
+ 
     </style>
 </head>
 <body>
+
+    <!-- Header -->
+    <div class="header">
+        Task Assigning Manager
+    </div>
+
     <div class="container mt-5">
         <h2 class="text-center">Create Daily Task</h2> <!-- Change title here too -->
         <br />
         
         <!-- Show success or error messages -->
         {% if messages %}
-            <div class="toast show" id="successToast">
+            <div class="popup-message" id="popupMessage">
                 {% for message in messages %}
-                    <div>{{ message }}</div>
+                    <p>{{ message }}</p>
                 {% endfor %}
             </div>
         {% endif %}
@@ -171,6 +189,16 @@
                 return array;
             }
         });
+        // Show the popup message for all users
+        window.onload = function() {
+            const popup = document.getElementById("popupMessage");
+            if (popup) {
+                popup.style.display = "block";
+                setTimeout(function() {
+                    popup.style.display = "none";
+                }, 1000); // Hide after 1 second
+            }
+        };
     </script>
 </body>
 </html>

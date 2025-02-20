@@ -15,8 +15,9 @@ class Task(models.Model):
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # ForeignKey to User
     start_date = models.DateField()
     end_date = models.DateField()
-    time = models.TimeField(null=True, blank=True)
-    target_time = models.CharField(max_length=50, default='10 mins')  # Default value
-    date_assigned = models.DateField(null=True, blank=True)
+    estimated_time = models.DurationField(null=True, blank=True)
+    # time = models.TimeField(null=True, blank=True)
+    # target_time = models.CharField(max_length=50, default='10 mins')  # Default value
+    # date_assigned = models.DateField(null=True, blank=True)
     def __str__(self):
         return self.task_name
