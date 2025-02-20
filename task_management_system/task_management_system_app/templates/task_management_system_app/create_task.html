@@ -56,28 +56,33 @@
             </div>
         {% endif %}
 
-        <!-- Form -->
         <form method="post" action="{% url 'create_task' %}" id="create-task-form">
             {% csrf_token %}
-
+        
             <!-- Dropdown for Existing Task -->
             <div class="form-group">
                 <label for="task_select">Select Task:</label>
                 <select class="form-control" id="task_select" name="task_name">
                     <option value="" disabled selected>Select a task</option>
-                    {% for task in tasks %}
-                        <option value="{{ task }}">{{ task }}</option>
+                    {% for task, estimated_time in tasks %}
+                        <option value="{{ task }}" data-estimated-time="{{ estimated_time }}">{{ task }}</option>
                     {% endfor %}
                 </select>
             </div>
-
+        
             <!-- Input for New Task Name -->
             <div class="form-group">
                 <label for="new_task_name">Task Name (if creating a new task):</label>
                 <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
             </div>
-
-            
+        
+            <!-- Estimated Time (auto-filled based on task selection) -->
+            <div class="form-group">
+                <label for="estimated_time">Estimated Time(in Minutes):</label>
+                <input type="text" class="form-control" id="estimated_time" name="estimated_time">
+            </div>
+        
+            <!-- Other form fields -->
             <div class="form-group">
                 <label for="assigned_to">Assign to:</label>
                 <select class="form-control" id="assigned_to" name="assigned_to">
@@ -88,20 +93,19 @@
                 </select>
             </div>
         
-
             <!-- Start Date -->
             <div class="form-group">
                 <label for="start_date">Start Date:</label>
                 <input type="date" id="start_date" name="start_date" required>
             </div>
-
+        
             <!-- End Date -->
             <div class="form-group">
                 <label for="end_date">End Date:</label>
                 <input type="date" id="end_date" name="end_date" required>
             </div>
-
-            <button type="button" class="btn btn-primary" id="submit_button">Submit</button>
+        
+            <button type="submit" class="btn btn-primary">Submit</button>
             <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
         </form>
     </div>
@@ -121,6 +125,7 @@
                 var endDate = $('#end_date').val();
                 var newTaskName = $('#new_task_name').val();  // Get the new task name
                 var assignedUser = $('#assigned_to').val();  // Get the user selected in the dropdown
+                var estimatedTime = $('#estimated_time').val();  // Get the estimated time value
                 var isManualTask = newTaskName && newTaskName.trim() !== "";  // Check if the user entered a new task
         
                 if (startDate && endDate) {
@@ -129,12 +134,13 @@
         
                     // If a new task is entered, add it to the tasks list
                     if (isManualTask) {
-                        // Manually add the new task and selected user to the form
+                        // Manually add the new task, assigned user, and estimated time to the form
                         $('#task_select').val(newTaskName);  // Set the new task in the dropdown
                         $('#assigned_to').val(assignedUser);  // Set the selected user in the dropdown
                         $('#start_date').val(startDate);  // Set start date
                         $('#end_date').val(endDate);  // Set end date
-        
+                        $('#estimated_time').val(estimatedTime);  // Set estimated time
+                        
                         // Submit the form for the manual task creation
                         $('#create-task-form').submit();  // For normal tasks
                         return;  // Exit after submitting the manual task
@@ -153,7 +159,8 @@
                                 task: shuffledTasks[i],
                                 user: randomUser,
                                 start_date: startDate,
-                                end_date: endDate
+                                end_date: endDate,
+                                estimated_time: estimatedTime
                             });
                         }
         
@@ -163,10 +170,10 @@
                             $('#assigned_to').val(assignment.user);
                             $('#start_date').val(assignment.start_date);
                             $('#end_date').val(assignment.end_date);
-        
+                            $('#estimated_time').val(assignment.estimated_time);  // Add estimated time
+
                             // Submit the form for each assignment
                             $('#create-task-form').submit();  // For normal tasks
-                           
                         });
                     }
                 } else {
@@ -183,6 +190,7 @@
                 return array;
             }
         });
+
         // Show the popup message for all users
         window.onload = function() {
             const popup = document.getElementById("popupMessage");

@@ -20,13 +20,14 @@ class CategoryForm(forms.ModelForm):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['task_name', 'category', 'assigned_to', 'start_date', 'end_date']
+        fields = ['task_name', 'assigned_to', 'start_date', 'end_date', 'estimated_time']
 
     task_name = forms.CharField(max_length=255)
     category = forms.CharField(max_length=255)
     assigned_to = forms.CharField(max_length=255)
     start_date = forms.DateField()
     end_date = forms.DateField()
+    estimated_time = forms.DecimalField(max_digits=5, decimal_places=2, required=False, min_value=0.01)  # Add estimated_time field
 
     def __init__(self, *args, **kwargs):
         # Dynamically set task_name choices from a list provided during view initialization

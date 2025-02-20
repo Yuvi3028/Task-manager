@@ -236,7 +236,15 @@
                             <!-- Display the estimated time -->
                             <td>
                                 {% if task.estimated_time %}
-                                    {{ task.estimated_time }}
+                                    {% if task.hours > 0 %}
+                                        {{ task.hours }} hour{% if task.hours > 1 %}s{% endif %}
+                                    {% endif %}
+                                    {% if task.minutes > 0 %}
+                                        {% if task.hours > 0 %}
+                                            
+                                        {% endif %}
+                                        {{ task.minutes }} min{% if task.minutes > 1 %}s{% endif %}
+                                    {% endif %}
                                 {% else %}
                                     Not Set
                                 {% endif %}

@@ -68,8 +68,8 @@
                 <label for="task_select">Select Task:</label>
                 <select class="form-control" id="task_select" name="task_name">
                     <option value="" disabled selected>Select a task</option>
-                    {% for task in tasks %}
-                        <option value="{{ task }}">{{ task }}</option>
+                    {% for task, estimated_time in tasks %}
+                        <option value="{{ task }}" data-estimated-time="{{ estimated_time }}">{{ task }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -79,6 +79,12 @@
             <div class="form-group">
                 <label for="new_task_name">Task Name (if creating a new task):</label>
                 <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
+            </div>
+
+            <!-- Estimated Time (auto-filled based on task selection) -->
+            <div class="form-group">
+                <label for="estimated_time">Estimated Time(in Minutes):</label>
+                <input type="text" class="form-control" id="estimated_time" name="estimated_time">
             </div>
 
             <!-- Assign to User -->

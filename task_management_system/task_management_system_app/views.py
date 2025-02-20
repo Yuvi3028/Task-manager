@@ -113,6 +113,7 @@ def home(request):
     if request.user.is_superuser:
         task_counts = {}
         task_names = {}
+        total_hours = {}  # Dictionary to hold total hours for each user
 
         # If no date range is selected (i.e., from_date and to_date are None), filter for today's tasks
         if not from_date and not to_date:
@@ -127,6 +128,16 @@ def home(request):
             user_tasks = tasks.filter(assigned_to=user)
             task_counts[user.username] = user_tasks.count()
             task_names[user.username] = [task.task_name for task in user_tasks]
+            
+            # Calculate total hours for this user
+            total_hours_for_user = 0
+            for task in user_tasks:
+                if task.estimated_time:
+                    if task.estimated_time < 60:
+                        total_hours_for_user += task.estimated_time / 60  # Convert minutes to hours
+                    else:
+                        total_hours_for_user += task.estimated_time / 60  # Hours are already in hours
+            total_hours[user.username] = total_hours_for_user
 
         # Prepare the data for the chart
         user_names = list(task_counts.keys())
@@ -136,7 +147,7 @@ def home(request):
         # Store selected users in session
         if selected_users:
             request.session['selected_users'] = selected_users    
-            
+
         # Render the template with task distribution chart data, filtered tasks, and selected users
         return render(request, 'home.html', {
             'user_names': json.dumps(user_names),
@@ -147,6 +158,7 @@ def home(request):
             'to_date': to_date,
             'users': users,
             'selected_users': selected_users,  # Pass selected users to the template for admin
+            'total_hours': total_hours,  # Pass the total hours to the template
         })
     
     # For regular users: filter tasks for the logged-in user and the selected date range
@@ -160,7 +172,23 @@ def home(request):
         else:
             # Default to today's tasks if no date range is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
+
+        # Sort tasks by time extracted from the task name (optional sorting logic)
         tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
+
+        # Calculate total hours for the logged-in user
+        total_minutes_for_user = 0
+        for task in tasks:
+            if task.estimated_time:
+                if task.estimated_time < 60:
+                    total_minutes_for_user += task.estimated_time  # Add minutes directly
+                else:
+                    total_minutes_for_user += task.estimated_time  # Convert hours to minutes
+
+        # Convert total minutes to hours and remaining minutes
+        total_hours = total_minutes_for_user // 60
+        remaining_minutes = total_minutes_for_user % 60
+
         # Render the template with tasks assigned to the logged-in user and filter parameters
         return render(request, 'home.html', {
             'tasks': tasks,
@@ -168,20 +196,21 @@ def home(request):
             'to_date': to_date,
             'users': users,
             'selected_users': selected_users,  # Pass selected users here for the admin view
+            'total_hours': total_hours,  # Total hours for the logged-in user
+            'remaining_minutes': remaining_minutes,  # Remaining minutes after full hours
         })
         
 # Add a view for downloading tasks in Excel format
-@login_required
 def download_tasks(request):
-    from_date = request.GET.get('start_date', None)
-    to_date = request.GET.get('end_date', None)
+    # Get the current date in the correct timezone
+    today = timezone.now().date()
     
-    # Fetch tasks, filtered by the date range if provided
+    # Fetch tasks, filtered by today's date
     tasks = Task.objects.all()
     
-    if from_date and to_date:
-        tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
-
+    # Filter tasks by today's date (consider only the date part of the datetime)
+    tasks = tasks.filter(start_date__gte=today, start_date__lt=today + timezone.timedelta(days=1))
+    
     # Sort tasks by start_date in ascending order
     tasks = tasks.order_by('start_date')
     
@@ -190,19 +219,63 @@ def download_tasks(request):
     if not user.is_superuser:  # If not admin, filter by logged-in user
         tasks = tasks.filter(assigned_to=user)
     
-    # Convert tasks to DataFrame
+    # Function to convert estimated_time into the desired format
+    def format_estimated_time(estimated_time):
+        if estimated_time is None or estimated_time == 0:
+            return "0 hours"
+        hours = estimated_time // 60  # Get full hours
+        minutes = estimated_time % 60  # Get remaining minutes
+        time_string = ""
+        if hours > 0:
+            time_string += f"{hours} hour" + ("s" if hours > 1 else "")
+        if minutes > 0:
+            if hours > 0:
+                time_string += " "
+            time_string += f"{minutes} minute" + ("s" if minutes > 1 else "")
+        return time_string
+
+    # Function to calculate total estimated time in hours and minutes
+    def calculate_total_estimated_time(tasks):
+        total_minutes = sum(task.estimated_time for task in tasks if task.estimated_time)
+        total_hours = total_minutes // 60
+        total_remaining_minutes = total_minutes % 60
+        return total_hours, total_remaining_minutes
+
+    # Task data for Excel download
     tasks_data = {
         'Task Name': [task.task_name for task in tasks],
         'Assigned To': [task.assigned_to for task in tasks],
-        # 'Category': [task.category for task in tasks],
-        'Start Date': [task.start_date.replace(tzinfo=None) if isinstance(task.start_date, datetime) and is_aware(task.start_date) else task.start_date for task in tasks],  # Make datetime timezone unaware
-        'End Date': [task.end_date.replace(tzinfo=None) if isinstance(task.end_date, datetime) and is_aware(task.end_date) else task.end_date for task in tasks],  # Make datetime timezone unaware
+        'Start Date': [task.start_date.replace(tzinfo=None) if isinstance(task.start_date, datetime) and is_aware(task.start_date) else task.start_date for task in tasks],
+        'End Date': [task.end_date.replace(tzinfo=None) if isinstance(task.end_date, datetime) and is_aware(task.end_date) else task.end_date for task in tasks],
+        'Estimated Time': [
+            format_estimated_time(task.estimated_time) for task in tasks
+        ],
     }
 
+    # Calculate total estimated time in hours and minutes
+    total_hours, total_remaining_minutes = calculate_total_estimated_time(tasks)
+    
+    # Add the total row at the bottom
+    total_row = {
+        'Task Name': 'Total',
+        'Assigned To': '',
+        'Start Date': '',
+        'End Date': '',
+        'Estimated Time': f"{total_hours} hour{'s' if total_hours != 1 else ''} {total_remaining_minutes} minute{'s' if total_remaining_minutes != 1 else ''}"
+    }
+
+    # Append the total row to the tasks data
+    tasks_data['Task Name'].append(total_row['Task Name'])
+    tasks_data['Assigned To'].append(total_row['Assigned To'])
+    tasks_data['Start Date'].append(total_row['Start Date'])
+    tasks_data['End Date'].append(total_row['End Date'])
+    tasks_data['Estimated Time'].append(total_row['Estimated Time'])
+
+    # Convert to DataFrame
     df = pd.DataFrame(tasks_data)
 
     # Generate a dynamic file name based on the assigned user's username and today's date
-    file_name = f"{user.username}_{datetime.now().strftime('%d-%m-%Y')}_tasks.xlsx"
+    file_name = f"{user.username}_{today.strftime('%d-%m-%Y')}_tasks.xlsx"
 
     # Create HTTP response with Excel file content
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -221,7 +294,6 @@ def register(request):
             user = form.save()
             user.email = form.cleaned_data.get('email')  # Save the email to the user instance
             user.save()  # Don't forget to save the user instance with the email
-            # login(request, user)  # You can log in the user if you want
             return redirect('login')
     else:
         form = RegistrationForm()
@@ -229,28 +301,14 @@ def register(request):
 
 def LogoutPage(request):
     logout(request)
-    # if not request.session.get('has_logged_in', False):  # Check if the user has logged in before
-    #         messages.success(request, "Login Successfully!")  # Set message
-    #         request.session['has_logged_in'] = True  # Set flag to True
     messages.success(request, "Logout Successfully!")
     return redirect("login")
 
-class TaskForm(forms.ModelForm):
-    class Meta:
-        model = Task
-        fields = ['task_name', 'category', 'assigned_to', 'start_date', 'end_date']
-
-    task_name = forms.CharField(max_length=255)
-    category = forms.CharField(max_length=255)
-    assigned_to = forms.CharField(max_length=255)
-    start_date = forms.DateField()
-    end_date = forms.DateField()
-    
 class TaskForm(forms.Form):
     
     class Meta:
         model = Task
-        fields = ['task_name', 'category', 'assigned_to', 'start_date', 'end_date']
+        fields = ['task_name', 'category', 'assigned_to', 'start_date', 'end_date', 'estimated_time']
     task_name = forms.CharField(max_length=100)
     assigned_to = forms.CharField(max_length=100)
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
@@ -261,7 +319,14 @@ def load_tasks_from_excel(file_path):
     try:
         if os.path.exists(file_path):
             df = pd.read_excel(file_path)
-            return df['Task Name'].dropna().tolist()  # List of task names from the Excel file
+
+            # Assuming the first column contains task names and the second column contains estimated times
+            tasks = df[['Task Name', 'Estimated Time']].dropna()  # Remove rows with missing values
+
+            # Convert to a list of tuples for easy processing
+            tasks_list = [(row['Task Name'], row['Estimated Time']) for index, row in tasks.iterrows()]
+            
+            return tasks_list  # A list of tuples with (task_name, estimated_time)
         return []
     except Exception as e:
         print(f"Error loading Excel file: {e}")
@@ -289,7 +354,8 @@ def assign_tasks(request, tasks, users_list, success_message, is_daily_task=Fals
                     task_name=new_task_name,
                     assigned_to=assigned_user,
                     start_date=start_date,
-                    end_date=end_date
+                    end_date=end_date,
+                    estimated_time=request.POST.get('estimated_time')  # You will need to get this value from the form
                 )
                 messages.success(request, f"Task '{new_task_name}' has been created and assigned to {assigned_to}.")
                 return redirect('create_daily_task' if is_daily_task else 'create_task')
@@ -300,27 +366,36 @@ def assign_tasks(request, tasks, users_list, success_message, is_daily_task=Fals
 
         # Case 2: If no new task is entered, proceed to automatic task assignment from the Excel or predefined tasks
         elif tasks and users_list:
-            # Shuffle the list of tasks to randomize the order
-            random.shuffle(tasks)
+            # Sort the tasks based on estimated time (largest first)
+            tasks.sort(key=lambda x: x[1], reverse=True)
 
-            # Shuffle selected users as well (if needed)
-            random.shuffle(users_list)
+            # Initialize users' total assigned time
+            users_time = {user: 0 for user in users_list}
 
             # Track assignments to ensure each task is assigned to a user
             task_assignments = []
 
-            # Assign tasks to users in a random order
-            for i, task_name in enumerate(tasks):
-                assigned_user = users_list[i % len(users_list)]  # Assign to a user randomly
-                # Create the task for the user
+            # Assign tasks to users in a way that balances their estimated times
+            for task_name, estimated_time in tasks:
+                # Find the user with the least assigned time
+                least_assigned_user = min(users_time, key=users_time.get)
+
+                # Assign the task to this user
+                assigned_user = least_assigned_user
                 Task.objects.create(
                     task_name=task_name,
                     assigned_to=assigned_user,
                     start_date=start_date,
-                    end_date=end_date
+                    end_date=end_date,
+                    estimated_time=estimated_time  # Use the estimated time from Excel
                 )
+
+                # Update the total assigned time for this user
+                users_time[assigned_user] += estimated_time
+
                 task_assignments.append(task_name)
 
+            # Show success message after assignment
             messages.success(request, f'{len(task_assignments)} tasks have been automatically assigned to users successfully!')
             return redirect('create_daily_task' if is_daily_task else 'create_task')
 
@@ -472,7 +547,6 @@ def view_task_list(request):
                 tasks = tasks.filter(end_date__lte=to_date)
             except ValueError:
                 messages.error(request, f"Invalid 'to_date' format: {to_date}")
-            
         else:
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
@@ -496,6 +570,15 @@ def view_task_list(request):
         else:
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
+
+    # Calculate hours and minutes for each task
+    for task in tasks:
+        if task.estimated_time:
+            task.hours = task.estimated_time // 60  # Calculate hours
+            task.minutes = task.estimated_time % 60  # Calculate remaining minutes
+        else:
+            task.hours = 0
+            task.minutes = 0
 
     # Sort tasks by time extracted from the task name
     tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
