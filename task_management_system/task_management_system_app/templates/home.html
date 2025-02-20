@@ -356,21 +356,19 @@
                                 <td>{{ task.end_date }}</td>
                                 <td>
                                     {% if task.estimated_time %}
-                                      {% if task.estimated_time < 60 %}
-                                        {{ task.estimated_time }} min{% if task.estimated_time > 1 %}s{% endif %}
-                                      {% else %}
-                                        {% with hours=task.estimated_time|divisibleby:60 %}
-                                          {% if hours == 1 %}
-                                            1 hour
-                                          {% else %}
-                                            {{ hours }} hours
-                                          {% endif %}
-                                        {% endwith %}
-                                      {% endif %}
+                                        {% if task.hours > 0 %}
+                                            {{ task.hours }} hour{% if task.hours > 1 %}s{% endif %}
+                                        {% endif %}
+                                        {% if task.minutes > 0 %}
+                                            {% if task.hours > 0 %}
+                                               
+                                            {% endif %}
+                                            {{ task.minutes }} min{% if task.minutes > 1 %}s{% endif %}
+                                        {% endif %}
                                     {% else %}
-                                      Not Set
+                                        Not Set
                                     {% endif %}
-                                  </td>
+                                </td>
                             </tr>
                         {% empty %}
                             <tr>

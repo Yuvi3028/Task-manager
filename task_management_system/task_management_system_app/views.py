@@ -91,6 +91,7 @@ def home(request):
     to_date = request.GET.get('to_date', None)
 
     tasks = Task.objects.all()  # Default to all tasks initially
+    
 
     # Handle date range filter if provided in the GET request
     if from_date and to_date:
@@ -176,6 +177,15 @@ def home(request):
         # Sort tasks by time extracted from the task name (optional sorting logic)
         tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
 
+         # Calculate hours and minutes for each task
+        for task in tasks:
+            if task.estimated_time:
+                task.hours = task.estimated_time // 60  # Calculate hours
+                task.minutes = task.estimated_time % 60  # Calculate remaining minutes
+            else:
+                task.hours = 0
+                task.minutes = 0
+        
         # Calculate total hours for the logged-in user
         total_minutes_for_user = 0
         for task in tasks:
