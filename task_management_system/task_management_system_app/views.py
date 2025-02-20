@@ -331,10 +331,10 @@ def load_tasks_from_excel(file_path):
             df = pd.read_excel(file_path)
 
             # Assuming the first column contains task names and the second column contains estimated times
-            tasks = df[['Task Name', 'Estimated Time']].dropna()  # Remove rows with missing values
+            tasks = df[['Task Name', 'Estimated Time(in minutes)']].dropna()  # Remove rows with missing values
 
             # Convert to a list of tuples for easy processing
-            tasks_list = [(row['Task Name'], row['Estimated Time']) for index, row in tasks.iterrows()]
+            tasks_list = [(row['Task Name'], row['Estimated Time(in minutes)']) for index, row in tasks.iterrows()]
             
             return tasks_list  # A list of tuples with (task_name, estimated_time)
         return []
