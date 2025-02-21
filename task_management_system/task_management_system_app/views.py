@@ -16,7 +16,6 @@ from django.utils import timezone
 from django.utils.timezone import is_aware, make_naive
 from django.views.decorators.csrf import csrf_exempt
 from dateutil import parser
-import datetime
 from datetime import datetime
 import pandas as pd
 from django.http import HttpResponse
@@ -27,7 +26,6 @@ import random
 import os
 import re
 import openpyxl
-import pandas as pd
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,7 +62,7 @@ def user_tasks_list(request):
 
 
 class RegistrationForm(UserCreationForm):
-    email = forms.EmailField(required=True)  # Add this line for email field
+    email = forms.EmailField(required=False)  # Add this line for email field
 
     class Meta:
         model = User
@@ -524,6 +522,9 @@ def view_task_list(request):
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
     
+    # Get the search query from the combined search box
+    search_query = request.GET.get('search_query', '')  # This is the search term for tasks and assigned users
+    
     # Get the current date to filter tasks by today's date
     today = datetime.today().date()
 
@@ -560,6 +561,13 @@ def view_task_list(request):
         else:
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
+        
+        # Filtering by the combined search query (task name or assigned user)
+        if search_query:
+            tasks = tasks.filter(
+                task_name__icontains=search_query
+            ) | tasks.filter(assigned_to__username__icontains=search_query)
+            
     else:
         # Regular users can see only their own tasks
         tasks = tasks.filter(assigned_to=request.user)
@@ -581,6 +589,12 @@ def view_task_list(request):
             # Default to today's date if no date filter is provided
             tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
+        # Filtering by the combined search query (task name or assigned user)
+        if search_query:
+            tasks = tasks.filter(
+                task_name__icontains=search_query
+            ) | tasks.filter(assigned_to__username__icontains=search_query)
+
     # Calculate hours and minutes for each task
     for task in tasks:
         if task.estimated_time:
@@ -599,6 +613,7 @@ def view_task_list(request):
         'from_date': from_date,
         'to_date': to_date,
         'users_list': users_list,  # Pass the list of users to the template for dropdown
+        'search_query': search_query,  # Include the search term in the template
     })
 
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX
