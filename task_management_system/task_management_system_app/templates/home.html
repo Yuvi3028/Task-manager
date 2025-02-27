@@ -24,6 +24,22 @@
             align-items: center;
         }
 
+        /* Styling the logo for normal users */
+        #userLogo {
+            position: absolute;
+            top: 70px;  /* Place the logo 70px below the header */
+            left: 20px;  /* Align the logo to the left */
+            z-index: 1000;  /* Ensure it's above other content */
+        }
+
+        /* Responsive Styling */
+        @media (max-width: 768px) {
+            #userLogo {
+                top: 100px;  /* Adjust for mobile devices */
+                left: 20px;  /* Keep left alignment */
+            }
+        }
+
         /* Sidebar toggle button container below the header */
         .sidebar-toggle-container {
             position: relative;  /* Positioned absolutely below the header */
@@ -152,12 +168,14 @@
             }
         }
     </style>
+    {% load static %} 
 </head>
 <body>
-
+    
     <!-- Header -->
     <div class="header">
         Task Assigning Manager
+        <!-- Logo --> 
         <!-- User Info Dropdown -->
         <div class="user-info">
             <div class="dropdown">
@@ -337,6 +355,11 @@
         {% else %}
             <!-- Normal User View -->
              <!-- Total Task Assigned Hours -->
+             {% if user.is_authenticated %}
+                <div class="logo" id="userLogo">
+                    <img src="{% static 'kgis_logo.png' %}" alt="Left Logo" style="max-height: 50px;">
+                </div>
+            {% endif %}
              <div class="total-hours">
                 <h4>Total Task Assigned Hours:</h4>
                 <div class="value">
