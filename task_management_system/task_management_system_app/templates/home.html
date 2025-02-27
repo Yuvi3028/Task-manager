@@ -222,7 +222,7 @@
             <!-- This form will only be displayed for admin users -->
             <form method="GET" action="{% url 'home' %}" id="user-selection-form">
                 <h3>Select Users for Today:</h3>
-
+            
                 <div class="mb-3">
                     <!-- Select All Users -->
                     <div class="form-check">
@@ -241,7 +241,7 @@
                         </div>
                     {% endfor %}
                 </div>
-
+            
                 <button type="submit" class="btn btn-primary">Select Users</button>
             </form>
         {% endif %}
@@ -416,17 +416,32 @@
                 checkbox.checked = selectAllCheckbox.checked;
             });
         }
-    
+        
         // Reset all checkboxes when the form is submitted
         document.getElementById('user-selection-form').onsubmit = function() {
-            // Reset the "Select All" checkbox to unchecked
-            document.getElementById('select-all').checked = false;
-    
-            // Reset individual user checkboxes
+            // Ensure that the form will submit the checked values of the checkboxes
             var userCheckboxes = document.querySelectorAll('.user-checkbox');
+            var selectedUsers = [];
+            
             userCheckboxes.forEach(function(checkbox) {
-                checkbox.checked = false;
+                if (checkbox.checked) {
+                    selectedUsers.push(checkbox.value);
+                }
             });
+        
+            // Add the selected users to a hidden input field for submission
+            var selectedUsersInput = document.createElement('input');
+            selectedUsersInput.setAttribute('type', 'hidden');
+            selectedUsersInput.setAttribute('name', 'selected_users');
+            selectedUsersInput.setAttribute('value', selectedUsers.join(','));
+        
+            // Append the selected users input field to the form
+            document.getElementById('user-selection-form').appendChild(selectedUsersInput);
+        
+            // Optionally: If you want to reset the "Select All" checkbox
+            document.getElementById('select-all').checked = false;
+        
+            return true; // Allow form submission to continue
         };
         
         // Show the popup message for all users
