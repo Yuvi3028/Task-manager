@@ -1,4 +1,4 @@
-MIS Employees Task Manager
+                                                                                          **MIS Employees Task Manager**
 This is a web-based Task Management System for managing tasks assigned to employees. The system is designed with Django, a Python web framework, and uses Bootstrap for front-end styling. It provides functionality for both regular users and admin users to view and manage tasks, with an admin dashboard for task statistics and task assignment.
 
 Features
@@ -24,8 +24,8 @@ Clone this repository:
 
 bash
 Copy code
-git clone https://github.com/your-username/mis-employees-task-manager.git
-cd mis-employees-task-manager
+git clone https://github.com/your-username/employees-task-manager.git
+cd employees-task-manager
 Create and activate a virtual environment:
 
 bash
