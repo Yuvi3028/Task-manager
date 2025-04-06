@@ -1,3 +1,5 @@
+{% load custom_filters %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,6 +25,76 @@
             align-items: center;
         }
 
+        /* Sidebar toggle button container below the header */
+        .sidebar-toggle-container {
+            position: relative;  /* Positioned absolutely below the header */
+            top: 15px;  /* Adjusted to be a little below the header */
+            left: 15px; /* Place the button towards the right */
+            z-index: 1200; /* Ensure it is above other elements like the sidebar */
+        }
+
+        /* Sidebar toggle button styling */
+        .sidebar-toggle {
+            font-size: 30px; /* Adjust size of the icon */
+            cursor: pointer;
+            color: Black; /* Color of the hamburger icon */
+        }
+
+        /* Custom styles for the sidebar */
+        .sidebar {
+            position: absolute;  /* Changed from fixed to absolute */
+            top: 60px;  /* Adjusted top to account for the header height */
+            left: -250px;  /* Initially off-screen */
+            height: calc(100% - 60px);  /* Subtract header height from full height */
+            width: 250px;
+            background-color: rgb(247, 247, 247);
+            padding-top: 20px;
+            display: block;
+            z-index: 1000;
+            transition: left 0.3s ease;  /* Smooth transition */
+        }
+
+        .sidebar a {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar h3 {
+            color: Black;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background-color: rgb(207, 186, 174);
+        }
+
+        /* Sidebar content area */
+        .content {
+            margin-left: 250px;  /* Add some left margin to push content when sidebar is visible */
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        /* User Info Styling */
+        .user-info {
+            position: absolute; /* Position it relative to the header */
+            top: 50%; /* Vertically center it in the header */
+            right: 20px; /* Adjust the position towards the right edge */
+            transform: translateY(-50%); /* Vertically center exactly */
+            z-index: 1200; /* Ensure it's above other elements like the sidebar */
+        }
+
+        .user-info .dropdown-toggle {
+            color: white;  /* Set text color to white */
+            cursor: pointer;  /* Change cursor to pointer for interactivity */
+            font-size: 1rem;  /* Adjust font size */
+            font-weight: bold;  /* Make text bold for better visibility */
+        }
+
+        /* Popup Message Styling */
         .popup-message {
             position: absolute;
             top: 80px; /* Position it just below the header */
@@ -35,13 +107,64 @@
             display: none; /* Initially hidden */
         }
 
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+                height: auto;
+                z-index: 1001;
+            }
+
+            .sidebar a {
+                padding: 15px 30px;
+            }
+
+            .sidebar-toggle {
+                top: 10px;
+                left: 10px;
+            }
+        }
+
     </style>
 </head>
 <body>
     <!-- Header -->
     <div class="header">
         Task Assigning Manager
+        <!-- Logo --> 
+        <!-- User Info Dropdown -->
+        <div class="user-info">
+            <div class="dropdown">
+                <span class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Welcome, {{ user.username }}
+                </span>
+                <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div> 
+
+    <!-- Sidebar Toggle Button Below Header -->
+    <div class="sidebar-toggle-container">
+        <span class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</span>
     </div>
+
+    <div class="sidebar" id="sidebarMenu" style="left: 0;">
+        <h3 class="text-center mb-4">Admin Menu</h3>
+        <a href="{% url 'create_task' %}" class="custom-link mb-2">Create Hourly Task</a>
+        <a href="{% url 'create_daily_task' %}" class="custom-link mb-2">Create Daily Task</a>
+        <a href="{% url 'view_task_list' %}" class="custom-link mb-2">View Task List</a>
+    </div>
+
 
     <div class="container mt-5">
         <h2 class="text-center">Create Hourly Task</h2>
@@ -55,59 +178,67 @@
                 {% endfor %}
             </div>
         {% endif %}
+        <div class="content" id="mainContent">    
+            <form method="post" action="{% url 'create_task' %}" id="create-task-form">
+                {% csrf_token %}
+            
+                <!-- Dropdown for Existing Task -->
+                <div class="form-group">
+                    <label for="task_select">Select Task:</label>
+                    <select class="form-control" id="task_select" name="task_name">
+                        <option value="" disabled selected>Select a task</option>
+                        {% for task, estimated_time in tasks %}
+                            <option value="{{ task }}" data-estimated-time="{{ estimated_time }}">{{ task }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Input for New Task Name -->
+                <div class="form-group">
+                    <label for="new_task_name">Task Name (if creating a new task):</label>
+                    <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
+                </div>
+                
+                <!-- Estimated Time (auto-filled based on task selection) -->
+                <div class="form-group">
+                    <label for="estimated_time">Estimated Time (in Minutes):</label>
+                    <input type="number" class="form-control" id="estimated_time" name="estimated_time" placeholder="Enter time in minutes" min="1" step="1">
+                </div>
 
-        <form method="post" action="{% url 'create_task' %}" id="create-task-form">
-            {% csrf_token %}
-        
-            <!-- Dropdown for Existing Task -->
-            <div class="form-group">
-                <label for="task_select">Select Task:</label>
-                <select class="form-control" id="task_select" name="task_name">
-                    <option value="" disabled selected>Select a task</option>
-                    {% for task, estimated_time in tasks %}
-                        <option value="{{ task }}" data-estimated-time="{{ estimated_time }}">{{ task }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        
-            <!-- Input for New Task Name -->
-            <div class="form-group">
-                <label for="new_task_name">Task Name (if creating a new task):</label>
-                <input type="text" class="form-control" id="new_task_name" name="new_task_name" placeholder="Enter new task name">
-            </div>
-        
-            <!-- Estimated Time (auto-filled based on task selection) -->
-            <div class="form-group">
-                <label for="estimated_time">Estimated Time(in Minutes):</label>
-                <input type="text" class="form-control" id="estimated_time" name="estimated_time">
-            </div>
-        
-            <!-- Other form fields -->
-            <div class="form-group">
-                <label for="assigned_to">Assign to:</label>
-                <select class="form-control" id="assigned_to" name="assigned_to">
-                    <option value="" disabled selected>Select user</option>
-                    {% for user in users %}
-                        <option value="{{ user.username }}">{{ user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        
-            <!-- Start Date -->
-            <div class="form-group">
-                <label for="start_date">Start Date:</label>
-                <input type="date" id="start_date" name="start_date" required>
-            </div>
-        
-            <!-- End Date -->
-            <div class="form-group">
-                <label for="end_date">End Date:</label>
-                <input type="date" id="end_date" name="end_date" required>
-            </div>
-        
-            <button type="submit" class="btn btn-primary">Submit</button>
-            <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
-        </form>
+                {% load custom_filters %}
+
+                <div class="form-group">
+                    <label for="assigned_to">Assign to:</label>
+                    <select class="form-control" id="assigned_to" name="assigned_to">
+                        <option value="" disabled selected>Select user</option>
+                        {% for user in users %}
+                            {% with shift=selected_users_shifts|get_item:user.username %}
+                                <option value="{{ user.username }}" data-shift="{{ shift}}" 
+                                        {% if user.username == selected_user %}selected{% endif %}>
+                                    {{ user.username }} - {{ shift }}
+                                </option>
+                            {% endwith %}
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                
+                <!-- Start Date -->
+                <div class="form-group">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" required>
+                </div>
+                
+                <!-- End Date -->
+                <div class="form-group">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" required>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="submit_button">Submit</button>
+                <a href="{% url 'home' %}" class="btn btn-secondary">Back</a>
+            </form>
+        </div>
     </div>
 
     <div class="toast" id="successToast">
@@ -117,88 +248,103 @@
     <!-- Include JS files -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         $(document).ready(function() {
+            // Update estimated time when a task is selected
+            $('#task_select').on('change', function() {
+                var selectedTask = $(this).find(':selected');
+                var estimatedTime = selectedTask.data('estimated-time');
+                $('#estimated_time').val(estimatedTime);
+            });
+        
+            // Handle new task name input
+            $('#new_task_name').on('input', function() {
+                $('#task_select').prop('disabled', true); // Disable task selection when entering new task name
+                $('#estimated_time').val('');  // Clear the estimated time field for new task
+            });
+        
+            // Handle form submission
             $('#submit_button').on('click', function() {
                 var startDate = $('#start_date').val();
                 var endDate = $('#end_date').val();
-                var newTaskName = $('#new_task_name').val();  // Get the new task name
-                var assignedUser = $('#assigned_to').val();  // Get the user selected in the dropdown
-                var estimatedTime = $('#estimated_time').val();  // Get the estimated time value
-                var isManualTask = newTaskName && newTaskName.trim() !== "";  // Check if the user entered a new task
         
-                if (startDate && endDate) {
-                    var tasks = [{% for task in tasks %}"{{ task }}", {% endfor %}];
-                    var users = [{% for user in users %}"{{ user.username }}", {% endfor %}];
-        
-                    // If a new task is entered, add it to the tasks list
-                    if (isManualTask) {
-                        // Manually add the new task, assigned user, and estimated time to the form
-                        $('#task_select').val(newTaskName);  // Set the new task in the dropdown
-                        $('#assigned_to').val(assignedUser);  // Set the selected user in the dropdown
-                        $('#start_date').val(startDate);  // Set start date
-                        $('#end_date').val(endDate);  // Set end date
-                        $('#estimated_time').val(estimatedTime);  // Set estimated time
-                        
-                        // Submit the form for the manual task creation
-                        $('#create-task-form').submit();  // For normal tasks
-                        return;  // Exit after submitting the manual task
-                    }
-        
-                    // If no new task is entered, proceed with automatic task assignment
-                    if (tasks.length > 0 && users.length > 0) {
-                        var shuffledTasks = shuffleArray(tasks);  // Shuffle tasks randomly
-        
-                        var assignments = [];
-                        // Assign tasks randomly to users
-                        for (var i = 0; i < shuffledTasks.length; i++) {
-                            var randomUser = users[Math.floor(Math.random() * users.length)];
-        
-                            assignments.push({
-                                task: shuffledTasks[i],
-                                user: randomUser,
-                                start_date: startDate,
-                                end_date: endDate,
-                                estimated_time: estimatedTime
-                            });
-                        }
-        
-                        // Now submit the form for each task/user assignment
-                        assignments.forEach(function(assignment) {
-                            $('#task_select').val(assignment.task);
-                            $('#assigned_to').val(assignment.user);
-                            $('#start_date').val(assignment.start_date);
-                            $('#end_date').val(assignment.end_date);
-                            $('#estimated_time').val(assignment.estimated_time);  // Add estimated time
-
-                            // Submit the form for each assignment
-                            $('#create-task-form').submit();  // For normal tasks
-                        });
-                    }
-                } else {
-                    alert("Please select a valid date range.");
+                // Validate start and end dates
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('End date cannot be earlier than start date.');
+                    return;
                 }
+        
+                // Manual task creation logic
+                var newTaskName = $('#new_task_name').val().trim();
+                var estimatedTime = $('#estimated_time').val();
+                if (newTaskName) {
+                    $('#task_select').val(newTaskName);  // Set new task name in dropdown
+                    $('#create-task-form').submit();  // Submit the form
+                    return;  // Prevent further processing
+                }
+        
+                // If no new task, automatic task assignment logic
+                var tasks = [{% for task in tasks %}"{{ task }}", {% endfor %}];
+                var users = [{% for user in users %}"{{ user.username }}", {% endfor %}];
+        
+                // Collect task assignments in an array
+                var assignments = [];
+                var selectedShift = $('#assigned_to option:selected').data('shift'); // Get the selected shift
+                
+                // Assign tasks based on shift type
+                tasks.forEach(function(task) {
+                    var randomUser = users[Math.floor(Math.random() * users.length)];
+        
+                    // Create assignment based on selected shift
+                    assignments.push({
+                        task: task,
+                        user: randomUser,
+                        start_date: startDate,
+                        end_date: endDate,
+                        estimated_time: estimatedTime
+                    });
+                });
+        
+                // After collecting all assignments, submit the form with those tasks
+                assignments.forEach(function(assignment, index) {
+                    // Dynamically set values for each assignment and submit the form
+                    $('#task_select').val(assignment.task);
+                    $('#assigned_to').val(assignment.user);
+                    $('#start_date').val(assignment.start_date);
+                    $('#end_date').val(assignment.end_date);
+                    $('#estimated_time').val(assignment.estimated_time);
+        
+                    if (index === assignments.length - 1) {
+                        // Only submit the form on the last iteration
+                        $('#create-task-form').submit();
+                    }
+                });
             });
         
-            // Function to shuffle an array randomly
+            // Shuffle array function
             function shuffleArray(array) {
                 for (var i = array.length - 1; i > 0; i--) {
                     var j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];  // Swap elements
+                    [array[i], array[j]] = [array[j], array[i]]; // Swap elements
                 }
                 return array;
             }
         });
-
-        // Show the popup message for all users
+    
+        // Show popup message
         window.onload = function() {
             const popup = document.getElementById("popupMessage");
             if (popup) {
                 popup.style.display = "block";
                 setTimeout(function() {
-                    popup.style.display = "none";
-                }, 1000); // Hide after 1 second
+                    popup.style.opacity = 0;
+                    setTimeout(function() {
+                        popup.style.display = "none";
+                        popup.style.opacity = 1;  // Reset opacity for the next message
+                    }, 500);
+                }, 3000);
             }
         };
     </script>

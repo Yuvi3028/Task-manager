@@ -22,6 +22,7 @@ from django.shortcuts import redirect
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth.views import LogoutView
+from django.contrib.auth import views as auth_views
 
 
 def redirect_to_login(request):
@@ -46,7 +47,7 @@ urlpatterns = [
     path('change_assigned_user/<int:task_id>/', views.change_assigned_user, name='change_assigned_user'),
     path('task-list/', views.view_task_list, name='view_task_list'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
-    
+    path('user_activity_logs/', views.user_activity_logs, name='user_activity_logs')
    
 ]
 

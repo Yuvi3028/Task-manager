@@ -1,31 +1,29 @@
 from django.contrib.auth import login, logout
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.contrib import messages
-from .models import Category, Task
-from .forms import CategoryForm,TaskForm,forms
+from .models import Task
+from .forms import forms
+from django.dispatch import receiver
+from django.utils import timezone
+from .models import UserActivity
+from django.contrib.auth.models import User
+from django.utils import timezone
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.forms import PasswordResetForm
-from django.core.exceptions import ObjectDoesNotExist
-from django.shortcuts import render
 from django.utils import timezone
-from django.utils.timezone import is_aware, make_naive
-from django.views.decorators.csrf import csrf_exempt
+from django.utils.timezone import is_aware
 from dateutil import parser
 from datetime import datetime
 import pandas as pd
 from django.http import HttpResponse
-from django.db import transaction
-from .forms import TaskForm
 import json
 import random
 import os
-import re
-import openpyxl
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,14 +50,11 @@ def user_login(request):
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})
 
-
 # @login_required
 @login_required
 def user_tasks_list(request):
     tasks = Task.objects.filter(assigned_to=request.user)
     return render(request, 'task_management_system_app/user_tasks_list.html', {'tasks': tasks})
-
-
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=False)  # Add this line for email field
@@ -73,8 +68,57 @@ class LoginForm(AuthenticationForm):
     class Meta:
         model = User
         fields = ['username', 'password']
+
+@receiver(user_logged_in)
+def log_user_login(sender, request, user, **kwargs):
+    UserActivity.objects.create(
+        user=user,
+        activity_type='Login',
+        timestamp=timezone.now()
+    )
+
+@receiver(user_logged_out)
+def log_user_logout(sender, request, user, **kwargs):
+    UserActivity.objects.create(
+        user=user,
+        activity_type='Logout',
+        timestamp=timezone.now()
+    )
         
-    
+@login_required
+def user_activity_logs(request):
+    if not request.user.is_superuser:
+        return redirect('home')  # Redirect non-admin users away from this page
+
+    # Get today's date
+    today = timezone.localdate()  # This ensures it's using the local timezone's date.
+
+    # Default to today's date if no date is provided
+    from_date = request.GET.get('from_date', today)
+    to_date = request.GET.get('to_date', today)
+
+    # Ensure from_date and to_date are in date format
+    if isinstance(from_date, str):
+        from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+    if isinstance(to_date, str):
+        to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
+
+    # Convert the datetime to start of the day for from_date and end of the day for to_date
+    from_date = timezone.make_aware(datetime.combine(from_date, datetime.min.time()))
+    to_date = timezone.make_aware(datetime.combine(to_date, datetime.max.time()))
+
+    # Get the activities within the date range
+    activities = UserActivity.objects.filter(timestamp__range=(from_date, to_date))
+
+    # Order activities by timestamp (most recent first)
+    activities = activities.order_by('-timestamp')
+
+    # Render the template with the filtered activities
+    return render(request, 'task_management_system_app/user_activity_logs.html', {
+        'activities': activities,
+        'from_date': from_date.date(),  # Use only the date part
+        'to_date': to_date.date()       # Use only the date part
+    })
 @login_required
 def home(request):
     # Get today's date
@@ -83,13 +127,15 @@ def home(request):
 
     # Get the selected users from the GET parameters (for admin only)
     selected_users = request.GET.getlist('selected_users')  # List of selected users (array of usernames)
-
+    selected_user_shifts = [request.session.get(f"shift_{user.username}") for user in users]
+    # print(f'selected_user_shifts:{selected_user_shifts}') 
+    
+    
     # Initialize from_date and to_date as None by default
     from_date = request.GET.get('from_date', None)
     to_date = request.GET.get('to_date', None)
 
     tasks = Task.objects.all()  # Default to all tasks initially
-    
 
     # Handle date range filter if provided in the GET request
     if from_date and to_date:
@@ -102,7 +148,26 @@ def home(request):
             tasks = tasks.filter(start_date__gte=from_date, end_date__lte=to_date)
         except ValueError:
             pass  # Handle invalid date format gracefully
+    
+    # Initialize user_shifts dictionary before POST block
+    user_shifts = {}  # Default initialization of user_shifts
+
+    # Store selected users and their shift types in session when the form is submitted
+    if request.method == 'POST':
+        selected_users = request.POST.getlist('selected_users')  # List of selected usernames
+        request.session['selected_users'] = selected_users  # Save the selected users
+        # Loop over users and save their shift types
+        for user in users:
+            shift_type = request.POST.get(f"shift_{user.id}")
+            request.session[f"shift_{user.username}"] = shift_type
+            # print(f"Stored {shift_type} for {user.username} in session")
         
+        user_shifts = {}
+        for user in users:
+            user_shift = request.session.get(f"shift_{user.username}", 'normal')
+            user_shifts[user.username] = user_shift
+            # print(f"User: {user.username}, Shift: {user_shift}") 
+
     # Display login success message only once
     if not request.session.get('has_logged_in', False):  # Check if the user has logged in before
         messages.success(request, "Login Successfully!")  # Set message
@@ -143,9 +208,6 @@ def home(request):
         task_counts_values = list(task_counts.values())
         task_names_values = list(task_names.values())
 
-        # Store selected users in session
-        if selected_users:
-            request.session['selected_users'] = selected_users    
 
         # Render the template with task distribution chart data, filtered tasks, and selected users
         return render(request, 'home.html', {
@@ -158,6 +220,8 @@ def home(request):
             'users': users,
             'selected_users': selected_users,  # Pass selected users to the template for admin
             'total_hours': total_hours,  # Pass the total hours to the template
+            'selected_user_shifts': selected_user_shifts,
+            'user_shifts': user_shifts,  # Pass the user shifts to the template
         })
     
     # For regular users: filter tasks for the logged-in user and the selected date range
@@ -206,7 +270,10 @@ def home(request):
             'selected_users': selected_users,  # Pass selected users here for the admin view
             'total_hours': total_hours,  # Total hours for the logged-in user
             'remaining_minutes': remaining_minutes,  # Remaining minutes after full hours
+            'selected_user_shifts': selected_user_shifts,
+            'user_shifts': user_shifts,  # Pass the user shifts to the template
         })
+
         
 # Add a view for downloading tasks in Excel format
 def download_tasks(request):
@@ -323,24 +390,179 @@ class TaskForm(forms.Form):
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     category = forms.CharField(max_length=100) 
 
+# Load tasks from Excel file
 def load_tasks_from_excel(file_path):
     try:
         if os.path.exists(file_path):
             df = pd.read_excel(file_path)
-
-            # Assuming the first column contains task names and the second column contains estimated times
             tasks = df[['Task Name', 'Estimated Time(in minutes)']].dropna()  # Remove rows with missing values
-
-            # Convert to a list of tuples for easy processing
             tasks_list = [(row['Task Name'], row['Estimated Time(in minutes)']) for index, row in tasks.iterrows()]
-            
-            return tasks_list  # A list of tuples with (task_name, estimated_time)
+            return tasks_list
         return []
     except Exception as e:
         print(f"Error loading Excel file: {e}")
         return []
 
-def assign_tasks(request, tasks, users_list, success_message, is_daily_task=False):
+# Extract time from task name (task name is expected to have a time in it)
+def extract_time_from_task_name(task_name):
+    """
+    Extract the time (e.g., '9:00 AM', '10:00 AM') from the task name and convert it to a datetime object.
+    """
+    try:
+        # Task format: "CIT - KG hourly 9:00 AM EST report"
+        time_str = task_name.split(' ')[-4] + ' ' + task_name.split(' ')[-3]  # Extract '9:00 AM'
+        return datetime.strptime(time_str, '%I:%M %p')  # Convert to datetime object
+    except Exception as e:
+        print(f"Error extracting time: {e}")
+        return None
+
+# Filter tasks for Late Shift (from 11:00 AM to 08:00 PM)
+def filter_late_shift_tasks(tasks):
+    late_shift_start = datetime.strptime("11:00 AM", '%I:%M %p')
+    late_shift_end = datetime.strptime("08:00 PM", '%I:%M %p')
+    return [
+        task for task in tasks
+        if extract_time_from_task_name(task[0]) and late_shift_start <= extract_time_from_task_name(task[0]) <= late_shift_end
+    ]
+
+# Filter tasks for Normal Shift (from 09:00 AM to 06:00 PM)
+def filter_normal_shift_tasks(tasks):
+    normal_shift_start = datetime.strptime("09:00 AM", '%I:%M %p')
+    normal_shift_end = datetime.strptime("06:00 PM", '%I:%M %p')
+    return [
+        task for task in tasks
+        if extract_time_from_task_name(task[0]) and normal_shift_start <= extract_time_from_task_name(task[0]) <= normal_shift_end
+    ]
+
+# Function to filter tasks by shift type
+def filter_tasks_by_shift(tasks, shift_type):
+    if shift_type == 'late':
+        return filter_late_shift_tasks(tasks)
+    else:
+        return filter_normal_shift_tasks(tasks)
+
+# Assign tasks to the users based on shift and time constraints
+def assign_tasks(request, tasks, users_list, success_message, is_daily_task=False, selected_users_shifts=None):
+    if request.method == 'POST':
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        new_task_name = request.POST.get('new_task_name')
+        assigned_to = request.POST.get('assigned_to')
+        shift_type = request.POST.get('shift_type')
+
+        # Validate start and end dates
+        if not start_date or not end_date:
+            messages.error(request, 'Please select both start and end dates.')
+            return redirect('create_daily_task' if is_daily_task else 'create_task')
+
+        # If new task name and assigned user are provided, create a task manually
+        if new_task_name and assigned_to:
+            try:
+                assigned_user = User.objects.get(username=assigned_to)
+
+                # Create and save the new task
+                Task.objects.create(
+                    task_name=new_task_name,
+                    assigned_to=assigned_user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    estimated_time=request.POST.get('estimated_time')
+                )
+                messages.success(request, f"Task '{new_task_name}' has been created and assigned to {assigned_to}.")
+                return redirect('create_daily_task' if is_daily_task else 'create_task')
+
+            except User.DoesNotExist:
+                messages.error(request, 'The selected user does not exist.')
+                return redirect('create_daily_task' if is_daily_task else 'create_task')
+
+        # Automatically assign tasks from the loaded Excel file if no new task is entered
+        elif tasks and users_list:
+            # Initialize users' total assigned time
+            users_time = {user: 0 for user in users_list}
+            task_assignments = []
+            
+            # Shuffle tasks to randomize the assignment order
+            random.shuffle(tasks)
+
+            # Sort tasks based on estimated time (longer tasks first)
+            tasks.sort(key=lambda x: x[1], reverse=True)
+
+            for task_name, estimated_time in tasks:
+                task_time = extract_time_from_task_name(task_name)
+
+                # Before 09:00 AM, assign tasks only to normal shift users
+                if task_time and task_time < datetime.strptime("09:00 AM", '%I:%M %p'):
+                    available_users = [user for user in users_list if selected_users_shifts[user.username] == 'normal']
+                # Between 09:00 AM and 06:00 PM, assign to both normal and late shift users
+                elif task_time and datetime.strptime("09:00 AM", '%I:%M %p') <= task_time <= datetime.strptime("05:30 PM", '%I:%M %p'):
+                    available_users = [user for user in users_list if selected_users_shifts[user.username] in ['normal', 'late']]
+                # Between 11:00 AM and 08:00 PM, assign to late shift users
+                elif task_time and datetime.strptime("11:30 AM", '%I:%M %p') <= task_time <= datetime.strptime("08:00 PM", '%I:%M %p'):
+                    available_users = [user for user in users_list if selected_users_shifts[user.username] == 'late']
+                else:
+                    continue  # Skip tasks that don't fit the time range
+
+                # Ensure late shift users do not receive tasks before 11:00 AM
+                if task_time and task_time < datetime.strptime("11:30 AM", '%I:%M %p'):
+                    available_users = [user for user in available_users if selected_users_shifts[user.username] == 'normal']
+                
+                # Ensure that after 5:00 PM tasks go strictly to late shift users
+                if task_time and task_time > datetime.strptime("06:00 PM", '%I:%M %p'):
+                    available_users = [user for user in available_users if selected_users_shifts[user.username] == 'late']
+
+                # Assign task to user with least total assigned time
+                least_assigned_user = min(available_users, key=lambda u: users_time[u])
+                assigned_user = least_assigned_user
+
+                # Create the task and assign it to the selected user
+                Task.objects.create(
+                    task_name=task_name,
+                    assigned_to=assigned_user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    estimated_time=estimated_time
+                )
+
+                # Update the user's total assigned time
+                users_time[assigned_user] += estimated_time
+                task_assignments.append(task_name)
+
+            # Success message
+            messages.success(request, f'{len(task_assignments)} tasks have been successfully assigned!')
+            return redirect('create_daily_task' if is_daily_task else 'create_task')
+
+        else:
+            messages.error(request, 'No tasks or users found to assign tasks to.')
+
+    # Render the page with the users and tasks data and the shifts for each user
+    return render(request, 'task_management_system_app/create_task.html' if not is_daily_task else 'task_management_system_app/create_daily_task.html', {
+        'users': users_list,
+        'tasks': tasks,
+        'selected_users_shifts': selected_users_shifts  # Ensure this is passed to the template
+    })
+
+@login_required
+def create_task(request):
+    excel_file_path = "tasks.xlsx"
+    tasks = load_tasks_from_excel(excel_file_path)
+
+    # Get selected users from the session
+    selected_users_usernames = request.session.get('selected_users', [])
+
+    # Fetch users from the database, filtering by selected usernames
+    users = User.objects.filter(username__in=selected_users_usernames)
+    users_list = list(users)
+
+    # Get the shifts for each user from the session
+    selected_users_shifts = {
+        user.username: request.session.get(f"shift_{user.username}", "normal")  # Default to "normal" if no shift stored
+        for user in users_list
+    }
+
+    # Call helper function to handle task creation
+    return assign_tasks(request, tasks, users_list, 'create_task', is_daily_task=False, selected_users_shifts=selected_users_shifts)
+
+def assign_tasks1(request, tasks, users_list, success_message, is_daily_task=False):
     # Handle task creation when form is submitted
     if request.method == 'POST':
         start_date = request.POST.get('start_date')
@@ -413,35 +635,20 @@ def assign_tasks(request, tasks, users_list, success_message, is_daily_task=Fals
     # Rendering directly with hard-coded templates
     return render(request, 'task_management_system_app/create_daily_task.html' if is_daily_task else 'task_management_system_app/create_task.html', {'users': users_list, 'tasks': tasks})
 
-@login_required
-def create_task(request):
-    excel_file_path = "tasks.xlsx"
-    tasks = load_tasks_from_excel(excel_file_path)
-
-    # Get selected users from the session (store the selected users in session in the home view)
-    selected_users_usernames = request.session.get('selected_users', [])
-    
-    # Fetch users from the database, excluding the admin user, and filter by selected usernames
-    users = User.objects.filter(username__in=selected_users_usernames)
-    users_list = list(users)
-
-    # Call helper function to handle task creation
-    return assign_tasks(request, tasks, users_list, 'create_task', is_daily_task=False)
-
-@login_required
+# The actual view to create daily tasks
 def create_daily_task(request):
     excel_file_path = "tasks1.xlsx"
     tasks = load_tasks_from_excel(excel_file_path)
 
     # Get selected users from the session (store the selected users in session in the home view)
     selected_users_usernames = request.session.get('selected_users', [])
-    
+
     # Fetch users from the database, excluding the admin user, and filter by selected usernames
     users = User.objects.filter(username__in=selected_users_usernames)
     users_list = list(users)
 
     # Call helper function to handle task creation
-    return assign_tasks(request, tasks, users_list, 'create_daily_task', is_daily_task=True)
+    return assign_tasks1(request, tasks, users_list, 'create_daily_task', is_daily_task=True)
 
 @login_required
 @admin_required
@@ -494,27 +701,6 @@ def delete_selected_tasks(request):
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
-# Function to extract time from task name (like '4:30 PM' from the task names)
-def extract_time_from_task_name(task_name):
-    try:
-        # Find the last occurrence of a time in the format of 'HH:MM AM/PM'
-        parts = task_name.split(' ')
-        
-        # Check if the last three parts contain the time (e.g., '4:30 PM')
-        time_str = None
-        if len(parts) >= 4:
-            time_str = parts[-4] + ' ' + parts[-3]  # This gives us the time part (e.g., '4:30 PM')
-        
-        # If the time_str is found, convert it to a datetime object
-        if time_str:
-            return datetime.strptime(time_str, '%I:%M %p')  # Convert to datetime object
-
-        return None  # If time extraction fails, return None
-    except Exception as e:
-        # print(f"Error extracting time from task name: {task_name}, error: {e}")
-        return None  # Return None if there is an error
-
 @login_required
 @admin_required
 def view_task_list(request):
@@ -528,73 +714,64 @@ def view_task_list(request):
     # Get the current date to filter tasks by today's date
     today = datetime.today().date()
 
+    # Capture the 'late_shift_user' from the request (if it's passed from the frontend)
+    late_shift_user = request.GET.get('late_shift_user')
+
     # Filter tasks for the logged-in user (for regular users)
     tasks = Task.objects.all()
-
-    # Get selected users from the session (store the selected users in session in the home view)
-    selected_users_usernames = request.session.get('selected_users', [])
     
-    # Get the list of users based on session or return all users
-    if selected_users_usernames:
-        users = User.objects.filter(username__in=selected_users_usernames)
-    else:
-        users = User.objects.filter(is_superuser=False)  # Exclude admin users
-    
-    users_list = list(users)
-    
-    # Admins can see all tasks, regular users can see their own tasks
+    # Admins can see all tasks
     if request.user.is_superuser:
-        # Admin can see all tasks and filter by dates
-        if from_date:
-            try:
-                from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
-                tasks = tasks.filter(start_date__gte=from_date)
-            except ValueError:
-                messages.error(request, f"Invalid 'from_date' format: {from_date}")
-
-        if to_date:
-            try:
-                to_date = parser.parse(to_date).date()  # Use dateutil.parser to handle flexible formats
-                tasks = tasks.filter(end_date__lte=to_date)
-            except ValueError:
-                messages.error(request, f"Invalid 'to_date' format: {to_date}")
-        else:
-            # Default to today's date if no date filter is provided
-            tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
+        if late_shift_user:
+            # Handle late shift user logic (update tasks assigned to this user)
+            tasks = tasks.filter(assigned_to__username=late_shift_user)
+            # Perform any additional logic related to the late shift user (e.g., notify or change task assignments)
+            # Example: Assign the late shift user to a task that was previously unassigned
+            tasks.update(assigned_to=User.objects.get(username=late_shift_user))
         
-        # Filtering by the combined search query (task name or assigned user)
-        if search_query:
-            tasks = tasks.filter(
-                task_name__icontains=search_query
-            ) | tasks.filter(assigned_to__username__icontains=search_query)
-            
     else:
         # Regular users can see only their own tasks
         tasks = tasks.filter(assigned_to=request.user)
 
-        if from_date:
-            try:
-                from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
-                tasks = tasks.filter(start_date__gte=from_date)
-            except ValueError:
-                messages.error(request, f"Invalid 'from_date' format: {from_date}")
+    # Apply filtering based on dates (from_date and to_date)
+    if from_date:
+        try:
+            from_date = parser.parse(from_date).date()  # Use dateutil.parser to handle flexible formats
+            tasks = tasks.filter(start_date__gte=from_date)
+        except ValueError:
+            messages.error(request, f"Invalid 'from_date' format: {from_date}")
 
-        if to_date:
-            try:
-                to_date = parser.parse(to_date).date()  # Use dateutil.parser to handle flexible formats
-                tasks = tasks.filter(end_date__lte=to_date)
-            except ValueError:
-                messages.error(request, f"Invalid 'to_date' format: {to_date}")
-        else:
-            # Default to today's date if no date filter is provided
-            tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
+    if to_date:
+        try:
+            to_date = parser.parse(to_date).date()  # Use dateutil.parser to handle flexible formats
+            tasks = tasks.filter(end_date__lte=to_date)
+        except ValueError:
+            messages.error(request, f"Invalid 'to_date' format: {to_date}")
+    else:
+        # Default to today's date if no date filter is provided
+        tasks = tasks.filter(start_date__lte=today, end_date__gte=today)
 
-        # Filtering by the combined search query (task name or assigned user)
-        if search_query:
-            tasks = tasks.filter(
-                task_name__icontains=search_query
-            ) | tasks.filter(assigned_to__username__icontains=search_query)
-
+    # Filtering by the combined search query (task name or assigned user)
+    if search_query:
+        tasks = tasks.filter(
+            task_name__icontains=search_query
+        ) | tasks.filter(assigned_to__username__icontains=search_query)
+    
+    # Calculate total estimated hours for each user
+    user_hours = {}
+    for task in tasks:
+        if task.assigned_to:
+            if task.assigned_to.username not in user_hours:
+                user_hours[task.assigned_to.username] = 0
+            user_hours[task.assigned_to.username] += task.estimated_time
+    
+    # Convert estimated time into hours and minutes format
+    user_hours_display = {}
+    for user, total_minutes in user_hours.items():
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        user_hours_display[user] = f"{hours} hour{'s' if hours > 1 else ''} {minutes} minute{'s' if minutes > 1 else ''}"
+    
     # Calculate hours and minutes for each task
     for task in tasks:
         if task.estimated_time:
@@ -607,6 +784,17 @@ def view_task_list(request):
     # Sort tasks by time extracted from the task name
     tasks = sorted(tasks, key=lambda task: extract_time_from_task_name(task.task_name) or datetime.min)
     
+    # Get the list of users based on session or return all users
+    selected_users_usernames = request.session.get('selected_users', [])
+    
+    # Get the list of users for dropdown
+    if selected_users_usernames:
+        users = User.objects.filter(username__in=selected_users_usernames)
+    else:
+        users = User.objects.filter(is_superuser=False)  # Exclude admin users
+    
+    users_list = list(users)
+    
     # Pass the full list of users and filtered tasks to the template
     return render(request, 'view_task_list.html', {
         'tasks': tasks,
@@ -614,6 +802,8 @@ def view_task_list(request):
         'to_date': to_date,
         'users_list': users_list,  # Pass the list of users to the template for dropdown
         'search_query': search_query,  # Include the search term in the template
+        'user_hours_display': user_hours_display,  # Pass the user total estimated hours data
+        'late_shift_user': late_shift_user  # Pass the late shift user to the template
     })
 
 # @csrf_exempt  # If using AJAX, we may need to disable CSRF protection, but only for AJAX

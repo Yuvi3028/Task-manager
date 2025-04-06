@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% load tz %}
+
+{% block content %}
+    <h2>User Activity Logs (Login/Logout)</h2>
+    
+    <!-- Date Range Filter Form -->
+    <form method="get" action="{% url 'user_activity_logs' %}">
+        <div class="form-row">
+            <div class="col-md-4">
+                <label for="from_date">From Date:</label>
+                <input type="date" id="from_date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="to_date">To Date:</label>
+                <input type="date" id="to_date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="form-control">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Go</button>
+            </div>
+        </div>
+    </form>
+
+    <br>
+
+    <!-- Display User Activity Logs -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Activity</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for activity in activities %}
+                <tr>
+                    <td>{{ activity.user.username }}</td>
+                    <td>{{ activity.activity_type }}</td>
+                    <td>{{ activity.timestamp|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3">No activities found for the selected date range.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

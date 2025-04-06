@@ -95,7 +95,7 @@
         }
         /* User Info Styling */
         .user-info {
-            position: absolute; /* Position it relative to the header */
+            position: relative; /* Position it relative to the header */
             top: 50%; /* Vertically center it in the header */
             right: 20px; /* Adjust the position towards the right edge */
             transform: translateY(-50%); /* Vertically center exactly */
@@ -183,13 +183,14 @@
                     Welcome, {{ user.username }}
                 </span>
                 <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                    {% if user.is_superuser %}
+                        <li><a class="dropdown-item" href="{% url 'user_activity_logs' %}">User Activity Logs</a></li> <!-- Add this line for Admin -->
+                    {% endif %}
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
             </div>
         </div>
-    </div>
-
-    
+    </div>    
 
     {% if user.is_superuser %}
         <!-- Sidebar for Admin Users -->
@@ -236,11 +237,13 @@
             </div>
         {% endif %}
 
+        {% load custom_filters %}
+
         {% if user.is_superuser %}
-            <!-- This form will only be displayed for admin users -->
-            <form method="GET" action="{% url 'home' %}" id="user-selection-form">
+            <form method="POST" action="{% url 'home' %}" id="user-selection-form">
+                {% csrf_token %}
                 <h3>Select Users for Today:</h3>
-            
+
                 <div class="mb-3">
                     <!-- Select All Users -->
                     <div class="form-check">
@@ -248,18 +251,23 @@
                         <label for="select-all" class="form-check-label" style="font-weight: bold;">Select All Users</label>
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
-                    <!-- User Checkboxes -->
                     {% for user in users %}
                         <div class="form-check">
                             <input type="checkbox" name="selected_users" value="{{ user.username }}" id="user_{{ user.id }}"
                                 {% if user.username in selected_users %} checked {% endif %} class="form-check-input user-checkbox">
                             <label for="user_{{ user.id }}" class="form-check-label">{{ user.username }}</label>
+
+                            <!-- Dropdown for selecting shift type -->
+                            <select class="form-control shift-select" name="shift_{{ user.id }}" id="shift_{{ user.id }}" style="width: auto; display: inline-block; margin-left: 10px;">
+                                <option value="normal" {% if user_shifts|get_item:user.username == 'normal' %} selected {% endif %}>Normal Shift (09:00 AM - 06:00 PM)</option>
+                                <option value="late" {% if user_shifts|get_item:user.username == 'late' %} selected {% endif %}>Late Shift (11:00 AM - 08:00 PM)</option>
+                            </select>
                         </div>
                     {% endfor %}
                 </div>
-            
+
                 <button type="submit" class="btn btn-primary">Select Users</button>
             </form>
         {% endif %}
@@ -430,41 +438,47 @@
 
     <script>
         // Function to toggle the "Select All" checkbox
+         // Function to select or deselect all checkboxes
         function toggleSelectAll() {
+            var checkboxes = document.querySelectorAll('.user-checkbox');
             var selectAllCheckbox = document.getElementById('select-all');
-            var userCheckboxes = document.querySelectorAll('.user-checkbox');
-            
-            // Loop through all checkboxes and set their state to match the "Select All" checkbox
-            userCheckboxes.forEach(function(checkbox) {
+            checkboxes.forEach(function (checkbox) {
                 checkbox.checked = selectAllCheckbox.checked;
             });
         }
         
         // Reset all checkboxes when the form is submitted
         document.getElementById('user-selection-form').onsubmit = function() {
-            // Ensure that the form will submit the checked values of the checkboxes
-            var userCheckboxes = document.querySelectorAll('.user-checkbox');
             var selectedUsers = [];
-            
+            var shiftData = {};  // Object to hold shift data for each user
+        
+            // Collect selected users and their respective shift
+            var userCheckboxes = document.querySelectorAll('.user-checkbox');
             userCheckboxes.forEach(function(checkbox) {
                 if (checkbox.checked) {
-                    selectedUsers.push(checkbox.value);
+                    var userId = checkbox.value;
+                    var shiftSelect = document.getElementById('shift_' + userId);
+                    var selectedShift = shiftSelect.value;
+                    selectedUsers.push(userId);
+                    shiftData[userId] = selectedShift;  // Store selected shift for each user
                 }
             });
         
-            // Add the selected users to a hidden input field for submission
+            // Add selected users to hidden input for submission
             var selectedUsersInput = document.createElement('input');
             selectedUsersInput.setAttribute('type', 'hidden');
             selectedUsersInput.setAttribute('name', 'selected_users');
             selectedUsersInput.setAttribute('value', selectedUsers.join(','));
-        
-            // Append the selected users input field to the form
             document.getElementById('user-selection-form').appendChild(selectedUsersInput);
         
-            // Optionally: If you want to reset the "Select All" checkbox
-            document.getElementById('select-all').checked = false;
+            // Add shift data to hidden input for submission
+            var shiftDataInput = document.createElement('input');
+            shiftDataInput.setAttribute('type', 'hidden');
+            shiftDataInput.setAttribute('name', 'shift_data');
+            shiftDataInput.setAttribute('value', JSON.stringify(shiftData));  // Send as JSON string
+            document.getElementById('user-selection-form').appendChild(shiftDataInput);
         
-            return true; // Allow form submission to continue
+            return true;  // Allow form submission to continue
         };
         
         // Show the popup message for all users
